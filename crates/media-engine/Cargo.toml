@@ -11,4 +11,4 @@ storystream-core = { path = "../core" }
 storystream-media-formats = { path = "../media-formats" }
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = "3.23.0"
