@@ -21,8 +21,7 @@ pub enum LibraryError {
     Io(#[from] std::io::Error),
 
     #[error("Media engine error: {0}")]
-    MediaEngine(#[from] media_engine::MediaError),
-
+    MediaEngine(#[from] media_engine::EngineError),
     #[error("Book not found: {0}")]
     BookNotFound(String),
 
