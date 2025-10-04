@@ -47,12 +47,12 @@ impl ConfigPersistence {
         // CRITICAL: Check for empty or whitespace-only files
         // These are treated as corrupted, not as valid defaults
         if contents.trim().is_empty() {
-            // Create a parse error by trying to parse the empty string
-            // This will naturally create an appropriate error
-            let parse_error = toml::from_str::<Config>("").unwrap_err();
-            return Err(ConfigError::ParseError {
+            return Err(ConfigError::ReadError {
                 path: self.config_path.clone(),
-                source: parse_error,
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Config file is empty or contains only whitespace"
+                ),
             });
         }
 
