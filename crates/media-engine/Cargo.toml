@@ -1,37 +1,14 @@
 [package]
-name = "media-engine"
-version = "0.1.0"
-edition = "2021"
+name = "storystream-media-engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-# Core dependencies
 storystream-core = { path = "../core" }
-storystream-database = { path = "../database" }
-
-# Audio playback
-rodio = "0.17"
-symphonia = { version = "0.5", features = ["mp3", "aac", "flac", "wav", "alac"] }
-
-# Async runtime
-tokio = { version = "1", features = ["full"] }
-async-trait = "0.1"
-
-# Error handling
-thiserror = "1.0"
-anyhow = "1.0"
-
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Logging
-tracing = "0.1"
-
-# Time
-chrono = "0.4"
-
-# Channels
-crossbeam-channel = "0.5"
+storystream-media-formats = { path = "../media-formats" }
 
 [dev-dependencies]
-tempfile = "3.8"
+tempfile = "3"
