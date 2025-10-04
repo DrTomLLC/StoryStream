@@ -5,6 +5,7 @@ use crate::{EngineError, EngineResult, EngineState, Equalizer, PlaybackSpeed, Pl
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::path::Path;
 
 /// Main audio engine
 pub struct AudioEngine {
