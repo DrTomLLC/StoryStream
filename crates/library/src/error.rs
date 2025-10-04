@@ -22,6 +22,7 @@ pub enum LibraryError {
 
     #[error("Media engine error: {0}")]
     MediaEngine(#[from] media_engine::EngineError),
+
     #[error("Book not found: {0}")]
     BookNotFound(String),
 
