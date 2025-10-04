@@ -13,4 +13,4 @@ repository.workspace = true
 # In the future, could add symphonia for deeper format inspection
 
 [dev-dependencies]
-tempfile = "3"
+tempfile = "3.23.0"
