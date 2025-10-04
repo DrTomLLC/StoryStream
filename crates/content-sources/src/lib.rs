@@ -6,6 +6,7 @@ mod librivox;
 mod archive;
 mod traits;
 
+use std::fmt;
 pub use local::LocalSource;
 pub use librivox::{LibriVoxSource, LibriVoxBook};
 pub use archive::{ArchiveSource, ArchiveItem};
