@@ -104,7 +104,7 @@ async fn run_player_ui(
         while let Ok(event) = events.recv() {
             match event {
         }
-    })
+    }
 
     let result = player_loop(&term, &mut engine, &db_state, book).await;
 
