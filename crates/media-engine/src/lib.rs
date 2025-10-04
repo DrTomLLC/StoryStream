@@ -6,6 +6,8 @@ mod equalizer;
 mod playback;
 mod speed;
 mod state;
+use std::fmt;
+use std::time::Duration;
 
 pub use engine::{AudioEngine, EngineConfig};
 pub use equalizer::{Equalizer, EqualizerBand, EqualizerPreset};
