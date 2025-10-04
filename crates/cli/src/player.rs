@@ -31,8 +31,8 @@ pub async fn start_playback(_db_path: &str, book: Book) -> Result<()> {
     };
 
     // Initialize media engine
-    let mut engine = MediaEngine::new().context("Failed to initialize media engine")?;
-
+    let mut engine = AudioEngine::new().context("Failed to initialize media engine")?;
+    
     // Load audio file (note: book_id is Option<i64>, but BookId is UUID)
     engine
         .load(&book.file_path, None)
