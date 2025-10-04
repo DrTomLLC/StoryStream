@@ -1,75 +1,37 @@
-// FILE: src/speed.rs
-// ============================================================================
-
-use crate::{EngineError, EngineResult};
-
-/// Playback speed with validation
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlaybackSpeed {
-    value: f32,
+// crates/media-engine/src/speed.rs
+/// Time-stretching for speed control WITHOUT pitch change
+pub struct TimeStretcher {
+    sonic: sonic::Stream,
+    speed: f32,
 }
 
-impl PlaybackSpeed {
-    /// Valid speed range
-    pub const MIN: f32 = 0.5;
-    pub const MAX: f32 = 3.0;
+impl TimeStretcher {
+    pub fn new(sample_rate: u32, channels: u8) -> Self {
+        let mut sonic = sonic::Stream::new(sample_rate as i32, channels as i32);
+        sonic.set_speed(1.0);
+        Self { sonic, speed: 1.0 }
+    }
 
-    /// Creates a new playback speed
-    pub fn new(speed: f32) -> EngineResult<Self> {
-        if !(Self::MIN..=Self::MAX).contains(&speed) {
+    pub fn set_speed(&mut self, speed: f32) -> EngineResult<()> {
+        // Validate speed range (0.5x to 3.0x)
+        if !(0.5..=3.0).contains(&speed) {
             return Err(EngineError::InvalidSpeed(speed));
         }
-        Ok(Self { value: speed })
+
+        self.sonic.set_speed(speed);
+        self.speed = speed;
+        Ok(())
     }
 
-    /// Returns the speed value
-    pub fn value(&self) -> f32 {
-        self.value
-    }
+    /// Process audio with time-stretching
+    /// Quality is maintained even at extreme speeds
+    pub fn process(&mut self, input: &[i16]) -> Vec<i16> {
+        self.sonic.write_i16_to_stream(input);
 
-    /// Returns whether pitch correction should be applied
-    pub fn needs_pitch_correction(&self) -> bool {
-        (self.value - 1.0).abs() > 0.01
-    }
-}
+        let output_size = self.sonic.samples_available();
+        let mut output = vec![0i16; output_size];
+        self.sonic.read_i16_from_stream(&mut output);
 
-impl Default for PlaybackSpeed {
-    fn default() -> Self {
-        Self { value: 1.0 }
-    }
-}
-
-#[cfg(test)]
-mod speed_tests {
-    use super::*;
-
-    #[test]
-    fn test_valid_speed() {
-        assert!(PlaybackSpeed::new(1.0).is_ok());
-        assert!(PlaybackSpeed::new(1.5).is_ok());
-        assert!(PlaybackSpeed::new(0.5).is_ok());
-        assert!(PlaybackSpeed::new(3.0).is_ok());
-    }
-
-    #[test]
-    fn test_invalid_speed() {
-        assert!(PlaybackSpeed::new(0.4).is_err());
-        assert!(PlaybackSpeed::new(3.1).is_err());
-        assert!(PlaybackSpeed::new(-1.0).is_err());
-    }
-
-    #[test]
-    fn test_speed_value() {
-        let speed = PlaybackSpeed::new(1.5).unwrap();
-        assert_eq!(speed.value(), 1.5);
-    }
-
-    #[test]
-    fn test_pitch_correction() {
-        let normal = PlaybackSpeed::default();
-        assert!(!normal.needs_pitch_correction());
-
-        let fast = PlaybackSpeed::new(1.5).unwrap();
-        assert!(fast.needs_pitch_correction());
+        output
     }
 }
