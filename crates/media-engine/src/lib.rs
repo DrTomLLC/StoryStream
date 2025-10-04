@@ -6,6 +6,8 @@ mod equalizer;
 mod playback;
 mod speed;
 mod state;
+mod decoder;
+
 use std::fmt;
 use std::time::Duration;
 
