@@ -5,6 +5,7 @@
 //! - Automatic backups before overwrites
 //! - Directory creation
 //! - Graceful error handling
+//! - NO PANICS - all errors are handled via Result types
 
 use crate::{Config, ConfigError, ConfigResult, CONFIG_VERSION};
 use std::fs;
@@ -26,7 +27,7 @@ impl ConfigPersistence {
     /// Loads configuration from file
     ///
     /// If the file doesn't exist, returns the default config.
-    /// If the file is corrupted, returns an error.
+    /// If the file is empty or corrupted, returns an error.
     pub fn load(&self) -> ConfigResult<Config> {
         if !self.config_path.exists() {
             log::info!(
@@ -42,6 +43,15 @@ impl ConfigPersistence {
                 source: e,
             }
         })?;
+
+        // CRITICAL: Check for empty or whitespace-only files
+        // These are treated as corrupted, not as valid defaults
+        if contents.trim().is_empty() {
+            return Err(ConfigError::ParseError {
+                path: self.config_path.clone(),
+                source: toml::de::Error::custom("Config file is empty or contains only whitespace"),
+            });
+        }
 
         let mut config: Config = toml::from_str(&contents).map_err(|e| ConfigError::ParseError {
             path: self.config_path.clone(),
@@ -102,8 +112,12 @@ impl ConfigPersistence {
             self.backup_config()?;
         }
 
-        // Serialize config to TOML
-        let toml_string = toml::to_string_pretty(config)?;
+        // Serialize config to TOML - explicitly handle the error
+        let toml_string = toml::to_string_pretty(config).map_err(|e| {
+            ConfigError::SerializationError {
+                source: e,
+            }
+        })?;
 
         // Write to temporary file first
         let temp_file = self.create_temp_file()?;
