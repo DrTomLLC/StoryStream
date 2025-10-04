@@ -15,7 +15,7 @@ members = [
     "crates/wear-bridge",
     "crates/cli",
     "crates/config",
-    "crates"
+    "crates/medica-container"
 ]
 
 [workspace.package]
