@@ -3080,6 +3080,9 @@ dependencies = [
 [[package]]
 name = "storystream-media-formats"
 version = "0.1.0"
+dependencies = [
+ "tempfile",
+]
 
 [[package]]
 name = "storystream-network"
