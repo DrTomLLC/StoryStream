@@ -6,6 +6,7 @@ mod detection;
 mod format;
 mod mime;
 
+use core::fmt;
 pub use capabilities::{FormatCapabilities, MetadataSupport};
 pub use detection::FormatDetector;
 pub use format::AudioFormat;
