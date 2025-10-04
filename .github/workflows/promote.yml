@@ -1,0 +1,73 @@
+name: storystream-promotions
+on:
+  push:
+    branches: ["first-dev","develop","release-candidate"]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  to-develop:
+    if: github.ref == 'refs/heads/first-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Open/Update PR first-dev → develop
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: first-dev → develop"
+          body: "Auto-promotion after CI gates. This PR will auto-merge when required checks pass."
+          base: develop
+          branch: promote/first-dev-to-develop
+          labels: ci, auto-promotion
+          draft: false
+          update-branch: true
+      - name: Enable automerge (squash)
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create-pull-request.outputs.pull-request-number || 0 }}
+          merge-method: squash
+
+  to-rc:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open/Update PR develop → release-candidate
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: develop → release-candidate"
+          body: "All CI stages (1–12) must pass. Maintainer approval gates release."
+          base: release-candidate
+          branch: promote/develop-to-rc
+          labels: ci, auto-promotion
+          draft: false
+          update-branch: true
+      - name: Enable automerge (rebase)
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create-pull-request.outputs.pull-request-number || 0 }}
+          merge-method: rebase
+
+  to-master:
+    if: github.ref == 'refs/heads/release-candidate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Open/Update PR release-candidate → master
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: RC → master"
+          body: "Will merge after Stage 13 approval & release."
+          base: master
+          branch: promote/rc-to-master
+          labels: ci, release
+          draft: false
+          update-branch: true
