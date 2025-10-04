@@ -1,3 +1,5 @@
+# FILE: Cargo.toml
+
 [package]
 name = "storystream-media-formats"
 version.workspace = true
@@ -5,6 +7,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[dependencies]
+# No external dependencies needed for format detection
+# In the future, could add symphonia for deeper format inspection
 
 [dev-dependencies]
 tempfile = "3"
