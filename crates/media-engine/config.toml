@@ -1,0 +1,15 @@
+# config.toml
+[player]
+# Audio Quality Settings
+audio_quality = "maximum"  # maximum, balanced, efficient
+resample_quality = "accurate"  # fast, balanced, accurate
+exclusive_mode = true  # Windows: Bit-perfect WASAPI
+buffer_size = 4096  # Samples (lower = less latency, higher = fewer glitches)
+
+# Processing
+enable_equalizer = false
+normalize_volume = false  # ReplayGain support
+enable_crossfade = false  # For music players, not audiobooks
+
+# Format Preferences (for multi-format books)
+preferred_formats = ["flac", "alac", "opus", "aac", "mp3"]
