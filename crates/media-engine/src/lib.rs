@@ -7,6 +7,7 @@ mod playback;
 mod speed;
 mod state;
 mod decoder;
+mod resampler;
 
 use std::fmt;
 use std::time::Duration;
