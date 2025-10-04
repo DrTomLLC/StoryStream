@@ -1,6 +1,9 @@
 // FILE: src/format.rs
 // ============================================================================
 
+use core::fmt;
+use std::path::Path;
+
 /// Supported audio formats
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AudioFormat {

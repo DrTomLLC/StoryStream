@@ -1,3 +1,5 @@
+extern crate core;
+
 // FILE: lib.rs
 mod capabilities;
 mod detection;
