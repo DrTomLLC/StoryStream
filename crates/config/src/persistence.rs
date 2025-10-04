@@ -49,7 +49,7 @@ impl ConfigPersistence {
         if contents.trim().is_empty() {
             return Err(ConfigError::ParseError {
                 path: self.config_path.clone(),
-                source: toml::de::Error::custom("Config file is empty or contains only whitespace"),
+                source: toml::de::Error::custom("Config file is empty or contains only whitespace", None),
             });
         }
 
