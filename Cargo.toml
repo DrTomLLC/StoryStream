@@ -16,7 +16,7 @@ members = [
     "crates/wear-bridge",
     "crates/cli",
     "crates/config",
-    "crates/media-container"
+    "crates/media-container",
 ]
 
 [workspace.package]
