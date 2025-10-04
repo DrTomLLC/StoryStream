@@ -1,14 +1,26 @@
-[package]
-name = "media-engine"
-version.workspace = true
-edition.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-
+# crates/media-engine/Cargo.toml
 [dependencies]
 storystream-core = { path = "../core" }
 storystream-media-formats = { path = "../media-formats" }
 
-[dev-dependencies]
-tempfile = "3.23.0"
+# High-quality audio stack
+symphonia = { version = "0.5", features = ["all"] }
+cpal = "0.15"
+rubato = "0.15"
+dasp = "0.11"
+
+# Time-stretching (for speed control without pitch change)
+sonic = "0.3"  # High-quality time-stretching
+
+# Utility
+crossbeam-channel = "0.5"
+parking_lot = "0.12"  # Better mutexes
+
+[features]
+default = ["all-codecs"]
+all-codecs = ["flac", "mp3", "aac", "vorbis", "opus"]
+flac = ["symphonia/flac"]
+mp3 = ["symphonia/mp3"]
+aac = ["symphonia/aac"]
+vorbis = ["symphonia/vorbis"]
+opus = ["symphonia/opus"]
