@@ -103,17 +103,7 @@ async fn run_player_ui(
     let event_handle = tokio::task::spawn_blocking(move || {
         while let Ok(event) = events.recv() {
             match event {
-                MediaEvent::PositionChanged(pos) => {
-                    if let Ok(mut state) = event_state.try_lock() {
-                        state.position = core_duration_from_std(pos);
-                    }
-                }
-                MediaEvent::StateChanged(_) => {}
-                MediaEvent::ChapterChanged(_) => {}
-                MediaEvent::PlaybackEnded => {}
-                MediaEvent::Error(err) => {
-                    eprintln!("Playback error: {}", err);
-                }
+                
             }
         }
     });
