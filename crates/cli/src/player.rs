@@ -136,7 +136,7 @@ async fn run_player_ui(
 
 async fn player_loop(
     term: &Term,
-    engine: &mut MediaEngine,
+    engine: &mut AudioEngine,
     db_state: &Arc<Mutex<storystream_core::PlaybackState>>,
     book: &Book,
 ) -> Result<()> {
@@ -376,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_media_engine_initialization() {
-        let result = MediaEngine::new();
+        let result = AudioEngine::new();
         assert!(result.is_ok());
     }
 }
