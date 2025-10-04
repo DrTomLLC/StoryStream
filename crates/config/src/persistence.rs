@@ -115,12 +115,8 @@ impl ConfigPersistence {
             self.backup_config()?;
         }
 
-        // Serialize config to TOML - explicitly handle the error
-        let toml_string = toml::to_string_pretty(config).map_err(|e| {
-            ConfigError::SerializationError {
-                source: e,
-            }
-        })?;
+        // Serialize config to TOML
+        let toml_string = toml::to_string_pretty(config).map_err(ConfigError::SerializeError)?;
 
         // Write to temporary file first
         let temp_file = self.create_temp_file()?;
