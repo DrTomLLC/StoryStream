@@ -47,9 +47,12 @@ impl ConfigPersistence {
         // CRITICAL: Check for empty or whitespace-only files
         // These are treated as corrupted, not as valid defaults
         if contents.trim().is_empty() {
+            // Create a parse error by trying to parse the empty string
+            // This will naturally create an appropriate error
+            let parse_error = toml::from_str::<Config>("").unwrap_err();
             return Err(ConfigError::ParseError {
                 path: self.config_path.clone(),
-                source: toml::de::Error::custom("Config file is empty or contains only whitespace", None),
+                source: parse_error,
             });
         }
 
@@ -113,7 +116,11 @@ impl ConfigPersistence {
         }
 
         // Serialize config to TOML - explicitly handle the error
-        let toml_string = toml::to_string_pretty(config).map_err(|e| ConfigError::SerializeError { source: e })?;
+        let toml_string = toml::to_string_pretty(config).map_err(|e| {
+            ConfigError::SerializationError {
+                source: e,
+            }
+        })?;
 
         // Write to temporary file first
         let temp_file = self.create_temp_file()?;
