@@ -8,6 +8,7 @@ mod speed;
 mod state;
 mod decoder;
 mod resampler;
+mod metrics;
 
 use std::fmt;
 use std::time::Duration;
