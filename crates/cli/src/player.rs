@@ -6,7 +6,7 @@ use storystream_database::{
     queries::playback::{create_playback_state, get_playback_state, update_playback_state},
     DbPool,
 };
-use media_engine::{MediaEngine, MediaEvent, PlaybackStatus};
+use media_engine::{AudioEngine, PlaybackStatus};
 use std::sync::Arc;
 use std::time::Duration as StdDuration;
 use tokio::sync::Mutex;
