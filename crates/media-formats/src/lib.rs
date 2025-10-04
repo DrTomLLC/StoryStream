@@ -1,3 +1,4 @@
+// FILE: lib.rs
 mod capabilities;
 mod detection;
 mod format;
