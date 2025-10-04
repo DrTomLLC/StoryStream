@@ -103,8 +103,6 @@ async fn run_player_ui(
     let event_handle = tokio::task::spawn_blocking(move || {
         while let Ok(event) = events.recv() {
             match event {
-                
-            }
         }
     });
 
