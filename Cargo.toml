@@ -4,6 +4,7 @@ members = [
     "crates/core",
     "crates/database",
     "crates/media-formats",
+    "crates/media-formats-video",
     "crates/media-engine",
     "crates/library",
     "crates/content-sources",
