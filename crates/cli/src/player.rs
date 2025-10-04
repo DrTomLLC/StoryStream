@@ -272,7 +272,7 @@ fn draw_player_ui(
         PlaybackStatus::Playing => style("Playing").green(),
         PlaybackStatus::Paused => style("Paused").yellow(),
         PlaybackStatus::Stopped => style("Stopped").red(),
-        PlaybackStatus::Buffering => style("Buffering").cyan(),
+    //    PlaybackStatus::Buffering => style("Buffering").cyan(),
     };
     term.write_line(&format!("  Status: {}", status))
         .context("Failed to write status")?;
