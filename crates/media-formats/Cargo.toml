@@ -9,6 +9,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+mime = "0.3.17"
 # No external dependencies needed for format detection
 # In the future, could add symphonia for deeper format inspection
 
