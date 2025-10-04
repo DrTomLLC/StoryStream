@@ -1,5 +1,5 @@
 [package]
-name = "storystream-media-engine"
+name = "media-engine"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
