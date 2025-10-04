@@ -61,6 +61,7 @@ pub const CONFIG_VERSION: u32 = 1;
 /// This contains all config sections. New sections can be added here,
 /// and they will automatically be included in load/save operations.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct Config {
     /// Config file format version
     pub version: u32,

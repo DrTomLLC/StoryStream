@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// Player preferences and behavior
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct PlayerConfig {
     /// Default volume level (0-100)
     pub default_volume: u8,

@@ -29,6 +29,7 @@ impl std::fmt::Display for LogLevel {
 
 /// Application-level settings
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct AppConfig {
     /// Database file path (relative to config dir if not absolute)
     pub database_path: PathBuf,

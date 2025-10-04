@@ -36,8 +36,7 @@ impl ConfigBackupManager {
     pub fn create_backup(&self, config: &Config) -> ConfigResult<PathBuf> {
         self.ensure_backup_dir()?;
 
-        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-        let backup_filename = format!("config_{}.toml", timestamp);
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%3f");        let backup_filename = format!("config_{}.toml", timestamp);
         let backup_path = self.backup_dir.join(backup_filename);
 
         let toml_string = toml::to_string_pretty(config)?;

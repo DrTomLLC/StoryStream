@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 /// Library management and import settings
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct LibraryConfig {
     /// Default library paths to scan for audiobooks
     pub library_paths: Vec<PathBuf>,
