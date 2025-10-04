@@ -1,70 +1,85 @@
-extern crate core;
+// crates/media-formats/src/lib.rs
+use std::path::Path;
 
-// FILE: lib.rs
-mod capabilities;
-mod detection;
-mod format;
-mod mime;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AudioFormat {
+    // Lossless
+    FLAC,
+    ALAC,
+    WAV,
+    AIFF,
+    WavPack,
+    APE,
 
-use core::fmt;
-pub use capabilities::{FormatCapabilities, MetadataSupport};
-pub use detection::FormatDetector;
-pub use format::AudioFormat;
-pub use mime::MimeType;
+    // High-Quality Lossy
+    Opus,
+    Vorbis,
+    AAC,      // M4A
+    M4B,      // Audiobook with chapters
+    MP3,
 
-/// Result type for format operations
-pub type FormatResult<T> = Result<T, FormatError>;
-
-/// Errors that can occur during format operations
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FormatError {
-    /// Format could not be determined
-    UnknownFormat,
-    /// File extension is invalid or empty
-    InvalidExtension,
-    /// File content does not match expected format
-    InvalidMagicBytes,
-    /// Format is not supported
-    UnsupportedFormat(String),
-    /// I/O error occurred
-    IoError(String),
+    // Unknown
+    Unknown,
 }
 
-impl fmt::Display for FormatError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FormatError::UnknownFormat => write!(f, "Unknown or unsupported audio format"),
-            FormatError::InvalidExtension => write!(f, "Invalid or empty file extension"),
-            FormatError::InvalidMagicBytes => {
-                write!(f, "File content does not match expected format")
-            }
-            FormatError::UnsupportedFormat(fmt) => write!(f, "Unsupported format: {}", fmt),
-            FormatError::IoError(msg) => write!(f, "I/O error: {}", msg),
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AudioQuality {
+    /// 16-bit, 44.1kHz (CD quality)
+    CD,
+    /// 16-bit, 48kHz (DVD quality)
+    DVD,
+    /// 24-bit, 96kHz (Hi-Res)
+    HiRes96,
+    /// 24-bit, 192kHz (Ultra Hi-Res)
+    HiRes192,
+    /// 32-bit float (Studio)
+    Studio,
+}
+
+#[derive(Debug, Clone)]
+pub struct AudioProperties {
+    pub format: AudioFormat,
+    pub sample_rate: u32,
+    pub bits_per_sample: u8,
+    pub channels: u8,
+    pub bitrate: Option<u32>, // For lossy formats
+    pub is_lossless: bool,
+    pub is_variable_bitrate: bool,
+}
+
+impl AudioFormat {
+    /// Detect format from file extension
+    pub fn from_path(path: &Path) -> Option<Self> {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .and_then(|ext| Self::from_extension(ext))
+    }
+
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        match ext.to_lowercase().as_str() {
+            "flac" => Some(Self::FLAC),
+            "m4a" => Some(Self::AAC),
+            "m4b" => Some(Self::M4B),
+            "mp3" => Some(Self::MP3),
+            "ogg" | "oga" => Some(Self::Vorbis),
+            "opus" => Some(Self::Opus),
+            "wav" => Some(Self::WAV),
+            "aiff" | "aif" => Some(Self::AIFF),
+            "wv" => Some(Self::WavPack),
+            "ape" => Some(Self::APE),
+            "alac" => Some(Self::ALAC),
+            _ => None,
         }
     }
-}
 
-impl std::error::Error for FormatError {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_format_error_display() {
-        let err = FormatError::UnknownFormat;
-        assert!(err.to_string().contains("Unknown"));
-
-        let err = FormatError::UnsupportedFormat("xyz".to_string());
-        assert!(err.to_string().contains("xyz"));
+    pub fn is_lossless(&self) -> bool {
+        matches!(
+            self,
+            Self::FLAC | Self::ALAC | Self::WAV | Self::AIFF | Self::WavPack | Self::APE
+        )
     }
 
-    #[test]
-    fn test_all_modules_compile() {
-        // Ensure all modules are accessible
-        let _ = AudioFormat::Mp3;
-        let _ = FormatCapabilities::default();
-        let _ = FormatDetector::new();
-        let _ = MimeType::from_format(AudioFormat::Mp3);
+    pub fn supports_chapters(&self) -> bool {
+        matches!(self, Self::M4B | Self::FLAC | Self::ALAC)
     }
 }
