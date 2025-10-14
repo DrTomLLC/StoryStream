@@ -1,29 +1,38 @@
-// FILE: crates/media-engine/src/error.rs
+use std::fmt;
 
-use thiserror::Error;
-
-#[derive(Error, Debug)]
+#[derive(Debug)]
 pub enum EngineError {
-    #[error("Decode error: {0}")]
+    Io(std::io::Error),
+    Decode(String),
     DecodeError(String),
-
-    #[error("Output error: {0}")]
-    OutputError(String),
-
-    #[error("Seek error: {0}")]
-    SeekError(String),
-
-    #[error("Invalid speed: {0}")]
     InvalidSpeed(f32),
-
-    #[error("Unsupported format: {0}")]
-    UnsupportedFormat(String),
-
-    #[error("Invalid state: {0}")]
+    SeekError(String),
+    OutputError(String),
     InvalidState(String),
-
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    Other(String),
 }
 
-pub type EngineResult<T> = Result<T, EngineError>;
+impl fmt::Display for EngineError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "IO error: {}", e),
+            Self::Decode(e) => write!(f, "Decode error: {}", e),
+            Self::DecodeError(e) => write!(f, "Decode error: {}", e),
+            Self::InvalidSpeed(s) => write!(f, "Invalid speed: {}", s),
+            Self::SeekError(e) => write!(f, "Seek error: {}", e),
+            Self::OutputError(e) => write!(f, "Output error: {}", e),
+            Self::InvalidState(e) => write!(f, "Invalid state: {}", e),
+            Self::Other(e) => write!(f, "Error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for EngineError {}
+
+impl From<std::io::Error> for EngineError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
+
+pub type EngineResult<T> = std::result::Result<T, EngineError>;

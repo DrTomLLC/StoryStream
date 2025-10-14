@@ -6,7 +6,7 @@ use storystream_database::{
     queries::playback::{create_playback_state, get_playback_state, update_playback_state},
     DbPool,
 };
-use media_engine::{AudioEngine, PlaybackStatus};
+use media_engine::{MediaEngine, PlaybackStatus};
 use std::sync::Arc;
 use std::time::Duration as StdDuration;
 use tokio::sync::Mutex;
@@ -29,7 +29,7 @@ pub async fn start_playback(_db_path: &str, book: Book) -> Result<()> {
         }
     };
 
-    let engine = AudioEngine::new();
+    let engine = MediaEngine::new();
 
     engine
         .load(&book.file_path)
@@ -57,7 +57,7 @@ pub async fn start_playback(_db_path: &str, book: Book) -> Result<()> {
 
 async fn run_player_ui(
     pool: &DbPool,
-    engine: AudioEngine,
+    engine: MediaEngine,
     initial_state: storystream_core::PlaybackState,
     book: &Book,
 ) -> Result<()> {
@@ -112,7 +112,7 @@ async fn run_player_ui(
 
 async fn player_loop(
     term: &Term,
-    engine: &Arc<AudioEngine>,
+    engine: &Arc<MediaEngine>,
     db_state: &Arc<Mutex<storystream_core::PlaybackState>>,
     book: &Book,
 ) -> Result<()> {
@@ -217,7 +217,7 @@ async fn player_loop(
 
 fn draw_player_ui(
     term: &Term,
-    engine: &AudioEngine,
+    engine: &MediaEngine,
     db_state: &storystream_core::PlaybackState,
     book: &Book,
 ) -> Result<()> {
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_media_engine_initialization() {
-        let engine = AudioEngine::new();
+        let engine = MediaEngine::new();
         assert!(engine.status().is_ok());
     }
 }
