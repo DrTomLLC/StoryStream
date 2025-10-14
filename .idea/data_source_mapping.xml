@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$PROJECT_DIR$/crates/database/src/queries/books.rs" value="2bab7b9d-c89e-49de-af86-f30c466a5bec" />
+    <file url="file://$PROJECT_DIR$/crates/database/src/search.rs" value="2bab7b9d-c89e-49de-af86-f30c466a5bec" />
+  </component>
+</project>

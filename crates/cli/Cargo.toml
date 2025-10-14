@@ -1,0 +1,39 @@
+[package]
+name = "storystream-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "storystream"
+path = "src/main.rs"
+
+[dependencies]
+# Internal crates
+storystream-core = { path = "../core" }
+storystream-database = { path = "../database" }
+media-engine = { path = "../media-engine" }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+crossterm = "0.27"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Time
+chrono = "0.4"
+
+# Display
+indicatif = "0.17"
+console = "0.15"
+tempfile = "3.23.0"
+env_logger = "0.11.8"
+serde_json = "1.0.145"

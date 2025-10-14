@@ -1,0 +1,26 @@
+# FILE: crates/library/Cargo.toml
+
+[package]
+name = "storystream-library"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+storystream-core = { path = "../core" }
+storystream-config = { path = "../config" }
+storystream-database = { path = "../database" }
+storystream-media-formats = { path = "../media-formats" }
+
+tokio = { version = "1.41", features = ["full"] }
+lofty = "0.22"
+symphonia = { version = "0.5", features = ["all"] }
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+notify = "6.1"
+walkdir = "2.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+tempfile = "3.13"

@@ -1,0 +1,33 @@
+[package]
+name = "storystream-config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Serialization
+serde = { version = "1.0.228", features = ["derive"] }
+toml = "0.9.7"
+serde_json = "1.0.145"
+
+# Error handling
+thiserror = "2.0.17"
+
+# File system operations
+directories = "6.0.0"  # XDG base directory support
+tempfile = "3.23.0"     # Atomic file writes
+
+# Logging
+log = "0.4.28"
+
+# Time utilities for backups
+chrono = "0.4.42"
+
+[dev-dependencies]
+env_logger = "0.11.8"
+
+[[bench]]
+name = "config_benchmarks"
+harness = false
+
+[dev-dependencies.criterion]
+version = "0.7.0"

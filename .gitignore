@@ -1,0 +1,30 @@
+# Rust build artifacts - NEVER commit these
+/target/
+**/target/
+**/*.rs.bk
+*.pdb
+*.exe
+*.dll
+*.so
+*.dylib
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test artifacts
+*.profraw
+*.profdata
+
+# Database
+*.db
+*.db-shm
+*.db-wal

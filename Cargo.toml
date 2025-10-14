@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/core",
+    "crates/database",
+    "crates/media-formats",
+    "crates/media-engine",
+    "crates/library",
+    "crates/content-sources",
+    "crates/feed-parser",
+    "crates/sync-engine",
+    "crates/network",
+    "crates/resilience",
+    "crates/android-bridge",
+    "crates/wear-bridge",
+    "crates/cli",
+    "crates/config",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["DrTomLLC"]
+edition = "2021"
+rust-version = "1.90"
+license = "AGPL-3.0-or-later OR Commercial"
+repository = "https://github.com/DrTomLLC/StoryStream"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

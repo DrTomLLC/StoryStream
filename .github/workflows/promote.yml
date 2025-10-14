@@ -1,0 +1,114 @@
+name: storystream-promotions
+
+on:
+  # Kick only after the "storystream-ci" workflow finishes successfully
+  workflow_run:
+    workflows: ["storystream-ci"]
+    types: [completed]
+
+# One promotion flow at a time per source branch
+concurrency:
+  group: promote-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  to-develop:
+    name: Promote first-dev → develop
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'first-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Check out the branch that just passed CI
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Open/Update PR first-dev → develop
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: first-dev → develop"
+          body: "Auto-promotion after CI gates. This PR will auto-merge when required checks pass."
+          base: develop
+          branch: promote/first-dev-to-develop
+          labels: ci, auto-promotion
+          draft: false
+          update-branch: true
+
+      - name: Enable automerge (squash)
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
+
+  to-rc:
+    name: Promote develop → release-candidate
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Open/Update PR develop → release-candidate
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: develop → release-candidate"
+          body: "All CI stages (1–12) must pass. Maintainer approval gates release."
+          base: release-candidate
+          branch: promote/develop-to-rc
+          labels: ci, auto-promotion
+          draft: false
+          update-branch: true
+
+      - name: Enable automerge (rebase)
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  to-master:
+    name: Promote release-candidate → master
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'release-candidate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Open/Update PR release-candidate → master
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: RC → master"
+          body: "Will merge after Stage 13 approval & release."
+          base: master
+          branch: promote/rc-to-master
+          labels: ci, release
+          draft: false
+          update-branch: true
+
+      - name: Enable automerge (rebase)
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
