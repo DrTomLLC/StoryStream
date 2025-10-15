@@ -1,43 +1,44 @@
+# .github/workflows/promote.yml
+# Opens auto-PRs to move changes through your branch flow:
+# first-dev → stage-7-security → stage-9-final → main
 name: storystream-promotions
 
 on:
-  # Kick only after the "storystream-ci" workflow finishes successfully
-  workflow_run:
-    workflows: ["storystream-ci"]
-    types: [completed]
-
-# One promotion flow at a time per source branch
-concurrency:
-  group: promote-${{ github.event.workflow_run.head_branch }}
-  cancel-in-progress: true
+  push:
+    branches:
+      - first-dev
+      - stage-7-security
+      - stage-9-final
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: promote-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  to-develop:
-    name: Promote first-dev → develop
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'first-dev'
+  to-stage7:
+    if: github.ref == 'refs/heads/first-dev'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          # Check out the branch that just passed CI
-          ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
-      - name: Open/Update PR first-dev → develop
+      - name: Open/Update PR first-dev → stage-7-security
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Promote: first-dev → develop"
-          body: "Auto-promotion after CI gates. This PR will auto-merge when required checks pass."
-          base: develop
-          branch: promote/first-dev-to-develop
+          title: "Promote: first-dev → stage-7-security"
+          body: |
+            Auto-promotion from **first-dev** to **stage-7-security**.
+            This PR will auto-merge when required checks pass.
+          base: stage-7-security
+          branch: promote/first-dev-to-stage7
           labels: ci, auto-promotion
           draft: false
           update-branch: true
@@ -49,27 +50,24 @@ jobs:
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: squash
 
-  to-rc:
-    name: Promote develop → release-candidate
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'develop'
+  to-stage9:
+    if: github.ref == 'refs/heads/stage-7-security'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
-      - name: Open/Update PR develop → release-candidate
+      - name: Open/Update PR stage-7-security → stage-9-final
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Promote: develop → release-candidate"
-          body: "All CI stages (1–12) must pass. Maintainer approval gates release."
-          base: release-candidate
-          branch: promote/develop-to-rc
+          title: "Promote: stage-7-security → stage-9-final"
+          body: |
+            Promotion gated by CI success on **stage-7-security**.
+          base: stage-9-final
+          branch: promote/stage7-to-stage9
           labels: ci, auto-promotion
           draft: false
           update-branch: true
@@ -81,34 +79,31 @@ jobs:
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
           merge-method: rebase
 
-  to-master:
-    name: Promote release-candidate → master
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'release-candidate'
+  to-main:
+    if: github.ref == 'refs/heads/stage-9-final'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
-      - name: Open/Update PR release-candidate → master
+      - name: Open/Update PR stage-9-final → main
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: "Promote: RC → master"
-          body: "Will merge after Stage 13 approval & release."
-          base: master
-          branch: promote/rc-to-master
+          title: "Promote: RC → main"
+          body: |
+            Final promotion into **main**. Approval may be required depending on repo settings.
+          base: main
+          branch: promote/stage9-to-main
           labels: ci, release
           draft: false
           update-branch: true
 
-      - name: Enable automerge (rebase)
+      - name: Enable automerge (squash)
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
-          merge-method: rebase
+          merge-method: squash
