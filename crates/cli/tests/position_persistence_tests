@@ -1,0 +1,305 @@
+//! Integration tests for position persistence
+//!
+//! File: crates/cli/tests/position_persistence_tests.rs
+//!
+//! These tests verify that playback position is correctly saved and restored.
+
+use anyhow::Result;
+use storystream_core::{Book, Duration as CoreDuration};
+use storystream_database::{
+    connection::{connect, DatabaseConfig},
+    migrations::run_migrations,
+    queries::{books::create_book, playback::{create_playback_state, get_playback_state, update_playback_state}},
+};
+use std::path::PathBuf;
+use tempfile::NamedTempFile;
+
+async fn setup_test_db() -> Result<(storystream_database::DbPool, NamedTempFile)> {
+    let temp_file = NamedTempFile::new()?;
+    let db_path = temp_file
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid path"))?;
+
+    let config = DatabaseConfig::new(db_path);
+    let pool = connect(config).await?;
+    run_migrations(&pool).await?;
+
+    Ok((pool, temp_file))
+}
+
+#[tokio::test]
+async fn test_position_save_and_restore() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    // Create a test book
+    let book = Book::new(
+        "Test Audiobook".to_string(),
+        PathBuf::from("/test/book.mp3"),
+        10_000_000,
+        CoreDuration::from_seconds(3600), // 1 hour book
+    );
+    create_book(&pool, &book).await?;
+
+    // Create initial playback state at position 0
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    // Simulate playback to 5 minutes
+    let position_5min = CoreDuration::from_seconds(300);
+    update_playback_state(&pool, book.id, position_5min).await?;
+
+    // Retrieve and verify position was saved
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, position_5min);
+
+    // Simulate more playback to 10 minutes
+    let position_10min = CoreDuration::from_seconds(600);
+    update_playback_state(&pool, book.id, position_10min).await?;
+
+    // Verify updated position
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, position_10min);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multiple_saves_same_book() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Long Book".to_string(),
+        PathBuf::from("/test/long.mp3"),
+        50_000_000,
+        CoreDuration::from_seconds(18000), // 5 hours
+    );
+    create_book(&pool, &book).await?;
+
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    // Simulate saving position every 5 seconds for 1 minute
+    for seconds in (0..=60).step_by(5) {
+        let position = CoreDuration::from_seconds(seconds);
+        update_playback_state(&pool, book.id, position).await?;
+    }
+
+    // Verify final position
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, CoreDuration::from_seconds(60));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_position_persistence_across_sessions() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Session Test".to_string(),
+        PathBuf::from("/test/session.mp3"),
+        20_000_000,
+        CoreDuration::from_seconds(7200), // 2 hours
+    );
+    create_book(&pool, &book).await?;
+
+    // Session 1: Listen for 15 minutes
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    let session1_end = CoreDuration::from_seconds(900); // 15 minutes
+    update_playback_state(&pool, book.id, session1_end).await?;
+
+    // Simulate app restart - retrieve state
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, session1_end);
+
+    // Session 2: Continue from saved position, listen for 10 more minutes
+    let session2_end = CoreDuration::from_seconds(1500); // 25 minutes total
+    update_playback_state(&pool, book.id, session2_end).await?;
+
+    // Verify persistence
+    let final_state = get_playback_state(&pool, book.id).await?;
+    assert_eq!(final_state.position, session2_end);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multiple_books_independent_positions() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    // Create multiple books
+    let book1 = Book::new(
+        "Book 1".to_string(),
+        PathBuf::from("/test/book1.mp3"),
+        10_000_000,
+        CoreDuration::from_seconds(3600),
+    );
+    let book2 = Book::new(
+        "Book 2".to_string(),
+        PathBuf::from("/test/book2.mp3"),
+        15_000_000,
+        CoreDuration::from_seconds(5400),
+    );
+
+    create_book(&pool, &book1).await?;
+    create_book(&pool, &book2).await?;
+
+    // Create states
+    let state1 = storystream_core::PlaybackState::new(book1.id);
+    let state2 = storystream_core::PlaybackState::new(book2.id);
+
+    create_playback_state(&pool, &state1).await?;
+    create_playback_state(&pool, &state2).await?;
+
+    // Set different positions
+    update_playback_state(&pool, book1.id, CoreDuration::from_seconds(100)).await?;
+    update_playback_state(&pool, book2.id, CoreDuration::from_seconds(200)).await?;
+
+    // Verify positions are independent
+    let retrieved1 = get_playback_state(&pool, book1.id).await?;
+    let retrieved2 = get_playback_state(&pool, book2.id).await?;
+
+    assert_eq!(retrieved1.position, CoreDuration::from_seconds(100));
+    assert_eq!(retrieved2.position, CoreDuration::from_seconds(200));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_position_at_boundaries() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Boundary Test".to_string(),
+        PathBuf::from("/test/boundary.mp3"),
+        5_000_000,
+        CoreDuration::from_seconds(1800), // 30 minutes
+    );
+    create_book(&pool, &book).await?;
+
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    // Test position at 0 (start)
+    update_playback_state(&pool, book.id, CoreDuration::from_seconds(0)).await?;
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, CoreDuration::from_seconds(0));
+
+    // Test position near end
+    update_playback_state(&pool, book.id, CoreDuration::from_seconds(1799)).await?;
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, CoreDuration::from_seconds(1799));
+
+    // Test position at exact end
+    update_playback_state(&pool, book.id, CoreDuration::from_seconds(1800)).await?;
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert_eq!(retrieved.position, CoreDuration::from_seconds(1800));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_high_precision_positions() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Precision Test".to_string(),
+        PathBuf::from("/test/precision.mp3"),
+        1_000_000,
+        CoreDuration::from_seconds(600),
+    );
+    create_book(&pool, &book).await?;
+
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    // Test millisecond precision
+    let positions_ms = vec![1234, 5678, 9999, 12345, 56789];
+
+    for pos_ms in positions_ms {
+        let position = CoreDuration::from_millis(pos_ms);
+        update_playback_state(&pool, book.id, position).await?;
+
+        let retrieved = get_playback_state(&pool, book.id).await?;
+        assert_eq!(retrieved.position.as_millis(), pos_ms);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_playback_state_with_all_fields() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Full State Test".to_string(),
+        PathBuf::from("/test/full.mp3"),
+        10_000_000,
+        CoreDuration::from_seconds(3600),
+    );
+    create_book(&pool, &book).await?;
+
+    // Create state with custom settings
+    let mut state = storystream_core::PlaybackState::new(book.id);
+    state.position = CoreDuration::from_seconds(300);
+    state.speed = storystream_core::PlaybackSpeed::new(1.5)?;
+    state.volume = 75;
+    state.is_playing = true;
+
+    create_playback_state(&pool, &state).await?;
+
+    // Retrieve and verify all fields
+    let retrieved = get_playback_state(&pool, book.id).await?;
+
+    assert_eq!(retrieved.position, CoreDuration::from_seconds(300));
+    assert_eq!(retrieved.speed.value(), 1.5);
+    assert_eq!(retrieved.volume, 75);
+    assert_eq!(retrieved.is_playing, true);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_concurrent_position_updates() -> Result<()> {
+    let (pool, _temp) = setup_test_db().await?;
+
+    let book = Book::new(
+        "Concurrent Test".to_string(),
+        PathBuf::from("/test/concurrent.mp3"),
+        10_000_000,
+        CoreDuration::from_seconds(3600),
+    );
+    create_book(&pool, &book).await?;
+
+    let state = storystream_core::PlaybackState::new(book.id);
+    create_playback_state(&pool, &state).await?;
+
+    // Simulate rapid position updates (like auto-save every 5 seconds)
+    let mut handles = vec![];
+
+    for i in 0..10 {
+        let pool_clone = pool.clone();
+        let book_id = book.id;
+
+        let handle = tokio::spawn(async move {
+            let position = CoreDuration::from_seconds(i * 5);
+            update_playback_state(&pool_clone, book_id, position).await
+        });
+
+        handles.push(handle);
+    }
+
+    // Wait for all updates
+    for handle in handles {
+        handle.await??;
+    }
+
+    // Verify we can still read the state
+    let retrieved = get_playback_state(&pool, book.id).await?;
+    assert!(retrieved.position.as_seconds() <= 45); // Last update was 9 * 5 = 45
+
+    Ok(())
+}

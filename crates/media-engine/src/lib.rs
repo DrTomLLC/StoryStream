@@ -1,22 +1,24 @@
 //! Media Engine - Audio playback engine for StoryStream
 
+mod chapters;
 mod decoder;
 mod engine;
 mod equalizer;
 mod error;
 mod output;
 mod playback;
-mod playback_thread;
+pub(crate) mod playback_thread;
 mod speed;
 mod state;
 
+pub use chapters::{ChapterList, ChapterMarker};
 pub use decoder::AudioDecoder;
 pub use engine::MediaEngine;
 pub use equalizer::{Equalizer, EqualizerPreset};
 pub use error::{EngineError, EngineResult};
 pub use output::AudioOutput;
 pub use speed::{Speed, SpeedProcessor};
-pub use state::{Chapter, EngineState, PlaybackState};
+pub use state::{EngineState, PlaybackState};
 pub use storystream_core::PlaybackSpeed;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,6 +38,7 @@ mod tests {
     fn test_all_exports_accessible() {
         // Just test that types are accessible
         let _ = PlaybackStatus::Stopped;
+        let _ = ChapterList::new();
     }
 
     #[test]
