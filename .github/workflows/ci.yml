@@ -1,14 +1,12 @@
-# .github/workflows/ci.yml
 name: CI
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ "v*" ]
+    branches: ["**"]        # run on any branch
   pull_request:
-    branches: [ main, develop ]
+    branches: ["**"]        # run on PRs targeting any branch
+  workflow_dispatch:        # allow manual runs from the Actions tab
 
-# Prevent duplicate runs on the same ref
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -18,33 +16,17 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  ############################
-  # Fast static & style checks
-  ############################
   check:
     name: Lint (fmt + clippy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: clippy, rustfmt }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-features --all-targets -- -D warnings
 
-      # Use toolchain from rust-toolchain.toml (if present)
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Cargo fmt (check)
-        run: cargo fmt --all -- --check
-
-      - name: Cargo clippy (deny warnings)
-        run: cargo clippy --workspace --all-features --all-targets -- -D warnings
-
-  ############################
-  # Build & unit tests (3 OS)
-  ############################
   build-test:
     name: Build & Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -55,42 +37,21 @@ jobs:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --all-features --all-targets
+      - run: cargo test --workspace --all-features -- --nocapture
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build (workspace, all features)
-        run: cargo build --workspace --all-features --all-targets
-
-      - name: Run tests
-        run: cargo test --workspace --all-features -- --nocapture
-
-  ############################
-  # Coverage (Linux only)
-  ############################
   coverage:
     name: Coverage (tarpaulin)
     runs-on: ubuntu-latest
     needs: check
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain (stable)
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin --locked
-
-      - name: Run coverage
-        run: |
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-tarpaulin --locked
+      - run: |
           cargo tarpaulin \
             --workspace \
             --all-features \
@@ -98,83 +59,49 @@ jobs:
             --out Xml \
             --out Lcov \
             --engine llvm
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
           path: |
             cobertura.xml
             lcov.info
           if-no-files-found: ignore
-
-      # Optional Codecov upload (will no-op without token on public repos)
-      - name: Upload to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+      - name: Upload to Codecov (optional)
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
           fail_ci_if_error: false
 
-  ############################
-  # Supply-chain checks
-  ############################
   security:
     name: Security (audit + deny)
     runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
+      - run: cargo install cargo-deny --locked
+      - run: cargo deny check --all-features
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-
-      - name: Cargo audit (advisories)
-        run: cargo audit
-
-      # cargo-deny will read deny.toml at repo root if present
-      - name: Install cargo-deny
-        run: cargo install cargo-deny --locked
-
-      - name: Cargo deny (licenses, bans, sources)
-        run: cargo deny check --all-features
-
-  ############################
-  # Docs (ensure doc build stays green)
-  ############################
   docs:
     name: Docs build
     runs-on: ubuntu-latest
     needs: check
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build docs (no-deps)
-        run: cargo doc --workspace --all-features --no-deps
-
-      - name: Upload docs artifact
-        uses: actions/upload-artifact@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --all-features --no-deps
+      - uses: actions/upload-artifact@v4
         with:
           name: cargo-docs
           path: target/doc
           if-no-files-found: ignore
 
-  ############################
-  # Gate: everything passed
-  ############################
   verify:
     name: Verify
     if: always()
