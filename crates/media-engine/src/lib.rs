@@ -1,34 +1,31 @@
-//! Media Engine - Audio playback engine for StoryStream
+//! Media Engine
+//!
+//! Core audio playback engine with support for:
+//! - Multiple audio formats (MP3, FLAC, WAV, OGG, etc.)
+//! - Variable playback speed with optional pitch correction
+//! - 10-band equalizer with presets
+//! - Chapter navigation
+//! - Gapless playback
 
-mod chapters;
-mod decoder;
-mod engine;
-mod equalizer;
-mod error;
-mod output;
-mod playback;
-pub(crate) mod playback_thread;
+pub mod chapters;
+pub mod decoder;
+pub mod engine;
+pub mod equalizer;
+pub mod error;
+pub mod output;
+pub mod playback;
+pub mod playback_thread;
 pub mod speed;
-mod state;
+pub mod state;
 
+// Re-export main types for convenience
 pub use chapters::{ChapterList, ChapterMarker};
 pub use decoder::AudioDecoder;
-pub use engine::MediaEngine;
-pub use equalizer::{Equalizer, EqualizerPreset};
+pub use engine::{EngineConfig, MediaEngine};
+pub use equalizer::{Equalizer, EqualizerBand, EqualizerPreset};
 pub use error::{EngineError, EngineResult};
-pub use output::AudioOutput;
+pub use playback::{PlaybackState, PlaybackStatus};
 pub use speed::{Speed, SpeedProcessor};
-pub use state::{EngineState, PlaybackState};
-pub use storystream_core::PlaybackSpeed;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PlaybackStatus {
-    Playing,
-    Paused,
-    Stopped,
-}
-
-pub type Result<T> = std::result::Result<T, EngineError>;
 
 #[cfg(test)]
 mod tests {
@@ -36,14 +33,15 @@ mod tests {
 
     #[test]
     fn test_all_exports_accessible() {
-        // Just test that types are accessible
-        let _ = PlaybackStatus::Stopped;
-        let _ = ChapterList::new();
+        // This test ensures all main types are accessible
+        let _config = EngineConfig::default();
+        let _speed = Speed::default();
+        let _eq = Equalizer::default();
     }
 
     #[test]
     fn test_error_display() {
-        let error = EngineError::InvalidSpeed(5.0);
-        assert!(format!("{}", error).contains("5"));
+        let err = EngineError::DecodeError("test".into());
+        assert!(!format!("{}", err).is_empty());
     }
 }

@@ -3,7 +3,7 @@
 use crate::error::{EngineError, EngineResult};
 use std::path::Path;
 use symphonia::core::audio::{AudioBufferRef, SampleBuffer, Signal, SignalSpec};
-use symphonia::core::codecs::{Decoder, DecoderOptions};
+pub(crate) use symphonia::core::codecs::{Decoder, DecoderOptions};
 use symphonia::core::errors::Error as SymphoniaError;
 use symphonia::core::formats::{FormatOptions, FormatReader, SeekMode, SeekTo};
 use symphonia::core::io::MediaSourceStream;
