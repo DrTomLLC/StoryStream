@@ -8,7 +8,7 @@ mod error;
 mod output;
 mod playback;
 pub(crate) mod playback_thread;
-mod speed;
+pub mod speed;
 mod state;
 
 pub use chapters::{ChapterList, ChapterMarker};
