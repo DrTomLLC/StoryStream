@@ -1,0 +1,41 @@
+name: Promote on CI success
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  promote:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = "${{ github.event.workflow_run.repository.owner.login }}";
+            const repo  = "${{ github.event.workflow_run.repository.name }}";
+            const from  = "${{ github.event.workflow_run.head_branch }}";
+            const map = { "first-dev":"stage-7-security","stage-7-security":"stage-9-final","stage-9-final":"main" };
+            const to = map[from];
+            if (!to) { core.info(`No promotion for ${from}`); return; }
+            // ensure target branch exists
+            async function ensure(branch){
+              try { await github.rest.repos.getBranch({owner,repo,branch}); }
+              catch(e){ if(e.status===404){
+                const def = (await github.rest.repos.get({owner,repo})).data.default_branch;
+                const sha = (await github.rest.git.getRef({owner,repo,ref:`heads/${def}`})).data.object.sha;
+                await github.rest.git.createRef({owner,repo,ref:`refs/heads/${branch}`,sha});
+              } else throw e; }
+            }
+            await ensure(to);
+            // open or reuse PR
+            let pr = (await github.rest.pulls.list({owner,repo,state:"open",head:`${owner}:${from}`,base:to})).data[0];
+            if(!pr){
+              pr = (await github.rest.pulls.create({owner,repo,head:from,base:to,title:`Promote: ${from} → ${to}`})).data;
+            }
+            // try to merge
+            try { await github.rest.pulls.merge({owner,repo,pull_number:pr.number,merge_method:"squash"}); }
+            catch(e){ core.warning(`Merge blocked: ${e.message}`); }
