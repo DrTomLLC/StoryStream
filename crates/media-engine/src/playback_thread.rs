@@ -96,7 +96,7 @@ impl AudioPipeline {
 
 /// Starts the playback thread with real audio processing
 pub fn start_playback_thread(
-    mut decoder: AudioDecoder,
+    decoder: AudioDecoder,
     command_rx: Receiver<PlaybackCommand>,
     duration: Duration,
     current_position: Arc<Mutex<Duration>>,

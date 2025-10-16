@@ -1,57 +1,133 @@
-// FILE: crates/media-engine/src/output.rs
+// crates/media-engine/src/output.rs
+// Enhanced audio output with device selection
 
+use crate::audio_device::{AudioDeviceManager, AudioDeviceInfo};
 use crate::error::{EngineError, EngineResult};
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::{Device, SampleRate, Stream, StreamConfig};
 use crossbeam_channel::{Receiver, TryRecvError};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Audio output using cpal
-#[allow(dead_code)]
+/// Audio output configuration
+#[derive(Debug, Clone)]
+pub struct AudioOutputConfig {
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub device_id: Option<String>,
+    pub buffer_size: Option<u32>,
+}
+
+impl Default for AudioOutputConfig {
+    fn default() -> Self {
+        Self {
+            sample_rate: 48000,
+            channels: 2,
+            device_id: None,
+            buffer_size: None,
+        }
+    }
+}
+
+/// Enhanced audio output with device selection
 pub struct AudioOutput {
     device: Device,
+    device_info: AudioDeviceInfo,
     config: StreamConfig,
     stream: Option<Stream>,
     sample_rate: u32,
+    manager: AudioDeviceManager,
 }
 
 impl AudioOutput {
-    /// Create a new audio output with the default device
-    pub fn new(sample_rate: u32, channels: u16) -> EngineResult<Self> {
-        let host = cpal::default_host();
+    /// Create audio output with specific configuration
+    pub fn with_config(config: AudioOutputConfig) -> EngineResult<Self> {
+        let mut manager = AudioDeviceManager::new()?;
 
-        let device = host
-            .default_output_device()
-            .ok_or_else(|| EngineError::OutputError("No output device found".to_string()))?;
+        // Select device
+        if let Some(device_id) = &config.device_id {
+            manager.select_device(device_id)?;
+        } else {
+            manager.select_default_device()?;
+        }
 
-        let config = StreamConfig {
-            channels,
-            sample_rate: SampleRate(sample_rate),
-            buffer_size: cpal::BufferSize::Default,
+        let device = manager.get_output_device()?;
+        let device_info = manager.get_selected_device()
+            .ok_or_else(|| EngineError::OutputError("No device selected".to_string()))?
+            .clone();
+
+        // Validate configuration against device capabilities
+        if config.channels < device_info.min_channels || config.channels > device_info.max_channels {
+            return Err(EngineError::OutputError(format!(
+                "Device {} supports {}-{} channels, requested {}",
+                device_info.name, device_info.min_channels, device_info.max_channels, config.channels
+            )));
+        }
+
+        if !device_info.sample_rates.is_empty() && !device_info.sample_rates.contains(&config.sample_rate) {
+            log::warn!("Sample rate {} may not be optimal for device {}", config.sample_rate, device_info.name);
+        }
+
+        let stream_config = StreamConfig {
+            channels: config.channels,
+            sample_rate: SampleRate(config.sample_rate),
+            buffer_size: config.buffer_size.map(|s| cpal::BufferSize::Fixed(s)).unwrap_or(cpal::BufferSize::Default),
         };
 
         Ok(Self {
             device,
-            config,
+            device_info,
+            config: stream_config,
             stream: None,
-            sample_rate,
+            sample_rate: config.sample_rate,
+            manager,
         })
+    }
+
+    /// Create audio output with default device and settings
+    pub fn new(sample_rate: u32, channels: u16) -> EngineResult<Self> {
+        Self::with_config(AudioOutputConfig {
+            sample_rate,
+            channels,
+            ..Default::default()
+        })
+    }
+
+    /// List available audio devices
+    pub fn list_devices(&self) -> Vec<AudioDeviceInfo> {
+        self.manager.list_devices()
+    }
+
+    /// Get current device info
+    pub fn device_info(&self) -> &AudioDeviceInfo {
+        &self.device_info
+    }
+
+    /// Check if current device is still available
+    pub fn is_device_available(&self) -> bool {
+        self.manager.is_device_available(&self.device_info.id)
     }
 
     /// Start playing audio from the given receiver
     pub fn play(&mut self, rx: Receiver<Vec<f32>>, running: Arc<AtomicBool>) -> EngineResult<()> {
+        // Check device is still available
+        if !self.is_device_available() {
+            return Err(EngineError::OutputError(format!(
+                "Audio device '{}' is no longer available",
+                self.device_info.name
+            )));
+        }
+
         let mut buffer = Vec::new();
         let mut position = 0;
 
-        let stream = self
-            .device
+        let device_name = self.device_info.name.clone();
+
+        let stream = self.device
             .build_output_stream(
                 &self.config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                    // Fill output buffer
                     for sample in data.iter_mut() {
-                        // Get more data if needed
                         while position >= buffer.len() {
                             match rx.try_recv() {
                                 Ok(new_data) => {
@@ -59,12 +135,10 @@ impl AudioOutput {
                                     position = 0;
                                 }
                                 Err(TryRecvError::Empty) => {
-                                    // No data available, output silence
                                     *sample = 0.0;
                                     return;
                                 }
                                 Err(TryRecvError::Disconnected) => {
-                                    // Sender disconnected, stop playback
                                     running.store(false, Ordering::Relaxed);
                                     *sample = 0.0;
                                     return;
@@ -80,24 +154,26 @@ impl AudioOutput {
                         }
                     }
                 },
-                |err| {
-                    log::error!("Audio output error: {}", err);
+                move |err| {
+                    log::error!("Audio output error on device '{}': {}", device_name, err);
                 },
                 None,
             )
             .map_err(|e| EngineError::OutputError(format!("Failed to build stream: {}", e)))?;
 
-        stream
-            .play()
+        stream.play()
             .map_err(|e| EngineError::OutputError(format!("Failed to start stream: {}", e)))?;
 
         self.stream = Some(stream);
+        log::info!("Audio playback started on device: {}", self.device_info.name);
         Ok(())
     }
 
     /// Stop playing audio
     pub fn stop(&mut self) {
-        self.stream = None;
+        if self.stream.take().is_some() {
+            log::info!("Audio playback stopped on device: {}", self.device_info.name);
+        }
     }
 
     /// Get the sample rate
@@ -106,17 +182,8 @@ impl AudioOutput {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_output_creation() {
-        // May fail on systems without audio devices
-        let result = AudioOutput::new(44100, 2);
-        // Don't assert - audio devices may not be available in CI
-        if result.is_ok() {
-            assert!(true);
-        }
+impl Drop for AudioOutput {
+    fn drop(&mut self) {
+        self.stop();
     }
 }
