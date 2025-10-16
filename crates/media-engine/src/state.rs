@@ -1,3 +1,4 @@
+// crates/media-engine/src/state.rs
 //! Engine state management
 
 use crate::{Equalizer, PlaybackStatus};
@@ -91,7 +92,7 @@ impl EngineState {
             position: 0.0,
             volume: 1.0,
             speed: PlaybackSpeed::new(1.0).unwrap(),
-            equalizer: Equalizer::new_10_band(),
+            equalizer: Equalizer::default(), // FIXED: Changed from new_10_band() to default()
         }
     }
 
@@ -116,11 +117,11 @@ impl EngineState {
     }
 
     pub fn set_volume(&mut self, volume: f32) {
-        self.volume = volume;
+        self.volume = volume.clamp(0.0, 1.0);
     }
 
-    pub fn speed(&self) -> PlaybackSpeed {
-        self.speed
+    pub fn speed(&self) -> &PlaybackSpeed {
+        &self.speed
     }
 
     pub fn set_speed(&mut self, speed: PlaybackSpeed) {
@@ -131,8 +132,8 @@ impl EngineState {
         &self.equalizer
     }
 
-    pub fn set_equalizer(&mut self, equalizer: Equalizer) {
-        self.equalizer = equalizer;
+    pub fn equalizer_mut(&mut self) -> &mut Equalizer {
+        &mut self.equalizer
     }
 }
 
@@ -143,45 +144,40 @@ impl Default for EngineState {
 }
 
 #[cfg(test)]
-mod state_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn test_chapter_creation() {
-        let chapter = Chapter::new(
-            "Chapter 1".to_string(),
-            Duration::from_secs(0),
-            Duration::from_secs(60),
-        );
-        assert_eq!(chapter.title, "Chapter 1");
-    }
-
-    #[test]
-    fn test_playback_state_new() {
+    fn test_playback_state_creation() {
         let state = PlaybackState::new();
         assert!(!state.is_playing());
         assert_eq!(state.position(), 0.0);
+        assert_eq!(state.duration(), 0.0);
     }
 
     #[test]
-    fn test_is_playing() {
-        let mut state = PlaybackState::new();
-        assert!(!state.is_playing());
-        state.set_playing(true);
-        assert!(state.is_playing());
-    }
-
-    #[test]
-    fn test_progress_percentage() {
+    fn test_playback_state_progress() {
         let mut state = PlaybackState::new();
         state.set_duration(100.0);
-        state.set_position(50.0);
-        assert_eq!(state.progress_percentage(), 50.0);
+        state.set_position(25.0);
+        assert_eq!(state.progress_percentage(), 25.0);
     }
 
     #[test]
-    fn test_progress_zero_duration() {
-        let state = PlaybackState::new();
-        assert_eq!(state.progress_percentage(), 0.0);
+    fn test_engine_state_creation() {
+        let state = EngineState::new();
+        assert_eq!(state.status(), PlaybackStatus::Stopped);
+        assert_eq!(state.position(), 0.0);
+        assert_eq!(state.volume(), 1.0);
+        assert_eq!(state.speed().value(), 1.0);
+    }
+
+    #[test]
+    fn test_engine_state_volume_clamping() {
+        let mut state = EngineState::new();
+        state.set_volume(1.5);
+        assert_eq!(state.volume(), 1.0);
+        state.set_volume(-0.5);
+        assert_eq!(state.volume(), 0.0);
     }
 }

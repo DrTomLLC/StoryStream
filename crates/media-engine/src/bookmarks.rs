@@ -151,7 +151,8 @@ impl BookmarkManager {
     }
 
     /// Add a bookmark
-    pub fn add_bookmark(&mut self, mut bookmark: Bookmark) -> Result<String, String> {
+    pub fn add_bookmark(&mut self, bookmark: Bookmark) -> Result<String, String> {
+        // FIXED: Removed 'mut' from parameter as it's never mutated
         // Validate position
         if let Some(duration) = self.duration {
             if bookmark.position > duration {

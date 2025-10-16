@@ -329,7 +329,11 @@ impl MediaEngine {
     }
 
     fn start_playback_thread(&mut self) -> Result<(), String> {
-        let decoder = self.decoder.take().ok_or("No decoder available")?;
+        let _decoder = self.decoder.take().ok_or("No decoder available")?;
+        // FIXED: Prefixed with underscore as it's intentionally unused
+        // This take() is needed to move the decoder out, but we don't actually use it
+        // because we create a new PlaybackAudioDecoder from the file path below
+
         let duration = self.duration.unwrap_or_else(|| Duration::from_secs(0));
 
         let (tx, rx) = channel();

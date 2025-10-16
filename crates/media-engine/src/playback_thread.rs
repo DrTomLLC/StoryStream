@@ -511,7 +511,8 @@ mod decoder_tests {
 // crates/media-engine/src/equalizer.rs
 // Add the apply method to the existing Equalizer implementation
 
-use std::f32::consts::PI;
+// UNUSED IMPORT - WILL BE USED LATER
+// use std::f32::consts::PI;
 
 #[derive(Debug, Clone)]
 pub struct EqualizerBand {
