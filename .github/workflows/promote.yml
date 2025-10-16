@@ -1,5 +1,5 @@
 # .github/workflows/promote.yml
-# Opens auto-PRs to move changes through your branch flow:
+# Auto-PRs to move code through YOUR flow:
 # first-dev → stage-7-security → stage-9-final → main
 name: storystream-promotions
 
@@ -25,8 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Open/Update PR first-dev → stage-7-security
         id: cpr
@@ -55,8 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Open/Update PR stage-7-security → stage-9-final
         id: cpr
@@ -64,8 +62,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Promote: stage-7-security → stage-9-final"
-          body: |
-            Promotion gated by CI success on **stage-7-security**.
+          body: "Promotion gated by CI success on **stage-7-security**."
           base: stage-9-final
           branch: promote/stage7-to-stage9
           labels: ci, auto-promotion
@@ -84,8 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Open/Update PR stage-9-final → main
         id: cpr
@@ -93,8 +89,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: "Promote: RC → main"
-          body: |
-            Final promotion into **main**. Approval may be required depending on repo settings.
+          body: "Final promotion into **main**. Approval may be required depending on repo settings."
           base: main
           branch: promote/stage9-to-main
           labels: ci, release
