@@ -2,7 +2,7 @@ use crate::chapters::ChapterList;
 use crate::decoder::AudioDecoder;
 use crate::equalizer::Equalizer;
 use crate::playback::{PlaybackState, PlaybackStatus};
-use crate::playback_thread::{self, PlaybackCommand};
+use crate::playback_thread::{self, PlaybackCommand, AudioDecoder as PlaybackAudioDecoder, Equalizer as PlaybackEqualizer};
 use crate::speed::Speed;
 use std::path::Path;
 use std::sync::mpsc::{channel, Sender};
@@ -337,8 +337,16 @@ impl MediaEngine {
             *guard = Some(tx);
         }
 
+        // Using the path from the loaded file to create a new playback decoder
+        let path = Path::new(self.loaded_file.as_ref().ok_or("No file loaded")?);
+        let playback_decoder = PlaybackAudioDecoder::new(path)
+            .map_err(|e| format!("Failed to create playback decoder: {:?}", e))?;
+
+        // Create a playback equalizer
+        let playback_equalizer = Arc::new(Mutex::new(PlaybackEqualizer::default()));
+
         let handle = playback_thread::start_playback_thread(
-            decoder,
+            playback_decoder,
             rx,
             duration,
             self.current_position.clone(),
@@ -346,7 +354,7 @@ impl MediaEngine {
             self.playback_state.clone(),
             self.volume.clone(),
             self.speed.clone(),
-            self.equalizer.clone(),
+            playback_equalizer,
         );
 
         self.thread_handle = Some(handle);
