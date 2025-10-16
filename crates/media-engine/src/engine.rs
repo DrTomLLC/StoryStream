@@ -30,6 +30,7 @@ impl Default for EngineConfig {
 
 /// Main media playback engine
 pub struct MediaEngine {
+    #[allow(dead_code)]
     config: EngineConfig,
     command_tx: Arc<Mutex<Option<Sender<PlaybackCommand>>>>,
     loaded_file: Option<String>,

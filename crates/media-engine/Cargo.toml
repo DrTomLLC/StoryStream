@@ -32,3 +32,11 @@ serde_json = "1.0"
 
 [dev-dependencies]
 tempfile = "3.23.0"
+
+[[example]]
+name = "list_audio_devices"
+path = "examples/list_audio_devices.rs"
+
+[[example]]
+name = "audio_device_demo"
+path = "examples/audio_device_demo.rs"

@@ -439,6 +439,7 @@ impl AudioDecoder {
     }
 
     /// Convert audio buffer to f32 samples
+    #[allow(dead_code)]
     fn audio_buffer_to_samples(&mut self, audio_buf: AudioBufferRef) -> EngineResult<Vec<f32>> {
         let spec = *audio_buf.spec();
         let duration = audio_buf.frames() as usize;

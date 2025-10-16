@@ -68,6 +68,7 @@ impl PartialOrd for Speed {
 
 /// Processes audio to change playback speed using time-stretching
 pub struct SpeedProcessor {
+    #[allow(dead_code)]
     sample_rate: u32,
     channels: u16,
     speed: Speed,

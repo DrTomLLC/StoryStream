@@ -1,8 +1,14 @@
-// examples/list_audio_devices.rs
+// crates/media-engine/examples/list_audio_devices.rs
 use media_engine::AudioDeviceManager;
 
 fn main() {
-    let manager = AudioDeviceManager::new().unwrap();
+    let manager = match AudioDeviceManager::new() {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("Failed to initialize audio device manager: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     println!("Available Audio Devices:");
     println!("========================");
