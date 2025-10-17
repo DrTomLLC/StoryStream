@@ -24,6 +24,7 @@ pub mod playback;
 pub mod playback_thread;
 pub mod speed;
 pub mod state;
+mod types;
 
 // Re-export main types for convenience
 pub use audio_device::{AudioDeviceInfo, AudioDeviceManager};

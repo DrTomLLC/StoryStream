@@ -15,6 +15,7 @@ members = [
     "crates/wear-bridge",
     "crates/cli",
     "crates/config",
+    "crates/tui",
 ]
 
 [workspace.package]
