@@ -9,7 +9,7 @@
 //! - `stats`: Library statistics
 //! - `common`: Shared traits and utilities
 
-mod book;
+pub mod book;
 mod bookmark;
 mod common;
 mod metadata;

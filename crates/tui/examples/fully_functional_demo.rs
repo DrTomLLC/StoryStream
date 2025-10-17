@@ -15,7 +15,7 @@ fn main() -> TuiResult<()> {
     println!("  - Complete keyboard controls");
     println!("Press 'h' for help, 'q' to quit");
 
-    std::thread::sleep(std::time::Duration::from_secs(2));
+    std::thread::sleep(std::time::Duration::from_secs(10));
 
     app.run()?;
 

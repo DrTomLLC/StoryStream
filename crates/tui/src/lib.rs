@@ -1,35 +1,5 @@
 // crates/tui/src/lib.rs
 //! Terminal User Interface for StoryStream
-//!
-//! This module provides a complete, interactive TUI for the StoryStream audiobook player.
-//!
-//! # Features
-//!
-//! - Library browsing with keyboard navigation
-//! - Now playing screen with progress bar
-//! - Playback controls (play/pause, seek, speed, volume)
-//! - Chapter navigation
-//! - Bookmark management
-//! - Search functionality
-//! - Playlists
-//! - Statistics dashboard
-//! - Settings configuration
-//! - Help screen with keyboard shortcuts
-//! - Mouse support
-//! - Configurable color themes
-//! - Plugin system
-//!
-//! # Example
-//!
-//! ```rust,no_run
-//! use storystream_tui::TuiApp;
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let mut app = TuiApp::new()?;
-//! app.run()?;
-//! # Ok(())
-//! # }
-//! ```
 
 mod app;
 mod error;
@@ -37,7 +7,7 @@ mod events;
 mod plugins;
 mod state;
 mod theme;
-mod ui;
+pub mod ui;  // CHANGED: Made public
 
 pub use app::App;
 pub use error::{TuiError, TuiResult};
