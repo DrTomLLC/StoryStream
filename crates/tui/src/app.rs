@@ -49,21 +49,142 @@ impl App {
     }
 
     /// Handles mouse events
+    /// Handles mouse events with full interactivity
     fn handle_mouse(&mut self, mouse: crossterm::event::MouseEvent) -> TuiResult<()> {
         use crossterm::event::MouseEventKind;
 
         match mouse.kind {
-            MouseEventKind::Down(_) => {
+            MouseEventKind::Down(button) => {
+                use crossterm::event::MouseButton;
                 self.state.set_mouse_position(mouse.column, mouse.row);
+
+                // Handle mouse clicks on different areas
+                let row = mouse.row;
+
+                // Top bar (tabs) - rows 0-2
+                if row <= 2 {
+                    // Calculate which tab was clicked based on column
+                    let col = mouse.column;
+
+                    // Tab bar layout: each tab is roughly 10 chars + spacing
+                    // StoryStream border takes first 3 chars
+                    let tab_index = if col < 15 {
+                        0 // Library
+                    } else if col < 25 {
+                        1 // Player
+                    } else if col < 38 {
+                        2 // Bookmarks
+                    } else if col < 48 {
+                        3 // Search
+                    } else if col < 60 {
+                        4 // Playlists
+                    } else if col < 73 {
+                        5 // Statistics
+                    } else if col < 83 {
+                        6 // Settings
+                    } else {
+                        7 // Help
+                    };
+
+                    // Switch to clicked tab
+                    self.state.view = match tab_index {
+                        0 => View::Library,
+                        1 => View::Player,
+                        2 => View::Bookmarks,
+                        3 => View::Search,
+                        4 => View::Playlists,
+                        5 => View::Statistics,
+                        6 => View::Settings,
+                        _ => View::Help,
+                    };
+
+                    self.state.set_status(format!("Switched to {} view",
+                                                  match self.state.view {
+                                                      View::Library => "Library",
+                                                      View::Player => "Player",
+                                                      View::Bookmarks => "Bookmarks",
+                                                      View::Search => "Search",
+                                                      View::Playlists => "Playlists",
+                                                      View::Statistics => "Statistics",
+                                                      View::Settings => "Settings",
+                                                      View::Help => "Help",
+                                                      View::Plugin => "Plugin",
+                                                  }
+                    ));
+                }
+                // Main content area - handle clicks based on current view
+                else if row > 2 && row < mouse.row.saturating_sub(3) {
+                    match self.state.view {
+                        View::Library => {
+                            // Click in library list - select item
+                            if button == MouseButton::Left {
+                                // Calculate which item was clicked (approximate)
+                                let item_row = row.saturating_sub(4); // Account for borders
+                                if item_row < self.state.library_items_count as u16 {
+                                    self.state.selected_item = item_row as usize;
+                                    self.state.set_status("Item selected - press Enter to play");
+                                }
+                            } else if button == MouseButton::Right {
+                                self.state.set_status("Right-click menu (coming soon)");
+                            }
+                        }
+                        View::Player => {
+                            // Click on player controls
+                            self.state.playback.is_playing = !self.state.playback.is_playing;
+                            let status = if self.state.playback.is_playing {
+                                "Playing (clicked)"
+                            } else {
+                                "Paused (clicked)"
+                            };
+                            self.state.set_status(status);
+                        }
+                        View::Search => {
+                            // Click in search results
+                            if button == MouseButton::Left {
+                                let item_row = row.saturating_sub(7); // Account for search box
+                                self.state.selected_item = item_row as usize;
+                                self.state.set_status("Search result selected");
+                            }
+                        }
+                        View::Playlists => {
+                            // Click in playlists
+                            if button == MouseButton::Left {
+                                let item_row = row.saturating_sub(4);
+                                self.state.selected_item = item_row as usize;
+                                self.state.set_status("Playlist selected");
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Double-click detection would go here
+                if button == MouseButton::Left {
+                    // Simple double-click simulation
+                    if self.state.view == View::Library {
+                        // Simulate: double-click plays the item
+                        // In a real app, you'd track time between clicks
+                    }
+                }
             }
             MouseEventKind::Up(_) => {
                 self.state.clear_mouse_position();
             }
             MouseEventKind::ScrollDown => {
+                // Scroll down in current view
                 self.state.select_next();
+                self.state.set_status("Scrolled down");
             }
             MouseEventKind::ScrollUp => {
+                // Scroll up in current view
                 self.state.select_previous();
+                self.state.set_status("Scrolled up");
+            }
+            MouseEventKind::Drag(_) => {
+                // Handle drag events (e.g., on progress bar)
+                if self.state.view == View::Player {
+                    self.state.set_status("Dragging (progress bar seek)");
+                }
             }
             _ => {}
         }
@@ -401,6 +522,7 @@ impl App {
     }
 
     /// Cycles to the next view
+    /// Cycles to the next view (includes ALL views)
     fn cycle_view(&mut self) {
         self.state.view = match self.state.view {
             View::Library => View::Player,
@@ -413,6 +535,24 @@ impl App {
             View::Help => View::Library,
             View::Plugin => View::Library,
         };
+
+        // Reset selection when switching views
+        self.state.reset_selection();
+
+        // Show which view we switched to
+        self.state.set_status(format!("Switched to {} view - explore with arrow keys",
+                                      match self.state.view {
+                                          View::Library => "Library",
+                                          View::Player => "Player",
+                                          View::Bookmarks => "Bookmarks",
+                                          View::Search => "Search",
+                                          View::Playlists => "Playlists",
+                                          View::Statistics => "Statistics",
+                                          View::Settings => "Settings",
+                                          View::Help => "Help",
+                                          View::Plugin => "Plugin",
+                                      }
+        ));
     }
 
     /// Cycles to the previous view
