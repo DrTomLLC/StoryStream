@@ -28,15 +28,8 @@ log = "0.4.28"
 crossbeam-channel = "0.5.15"
 md5 = "0.8.0"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0"
+serde_json = "1.0.145"
 
 [dev-dependencies]
 tempfile = "3.23.0"
 
-[[example]]
-name = "list_audio_devices"
-path = "examples/list_audio_devices.rs"
-
-[[example]]
-name = "audio_device_demo"
-path = "examples/audio_device_demo.rs"
