@@ -8,3 +8,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+thiserror = "2.0.17"
+tokio = { version = "1.42", features = ["time", "sync"] }

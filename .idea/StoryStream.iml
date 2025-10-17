@@ -24,6 +24,8 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/cli/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/feed-parser/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/feed-parser/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/resilience/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/resilience/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
