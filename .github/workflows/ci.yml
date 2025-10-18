@@ -1,11 +1,36 @@
-name: CI
 on:
-  push: { branches: ["**"] }
-  pull_request: { branches: ["**"] }
-  workflow_dispatch:
-permissions: { contents: read }
-jobs:
-  ok:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo CI OK
+  push:
+    branches:
+      - first-dev
+      - stage-1-hygiene
+      - stage-2-clippy
+      - stage-3-build
+      - stage-4-tests
+      - stage-5-coverage
+      - stage-6-fuzz
+      - stage-7-security
+      - stage-8-performance
+      - stage-9-docs
+      - stage-10-flaky
+      - stage-11-perf
+      - stage-12-docs
+      - release-candidate
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - stage-1-hygiene
+      - stage-2-clippy
+      - stage-3-build
+      - stage-4-tests
+      - stage-5-coverage
+      - stage-6-fuzz
+      - stage-7-security
+      - stage-8-performance
+      - stage-9-docs
+      - stage-10-flaky
+      - stage-11-perf
+      - stage-12-docs
+      - release-candidate
+      - main
+  workflow_dispatch: {}

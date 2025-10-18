@@ -1,116 +1,337 @@
-# .github/workflows/promote-on-ci.yml
-# Promotes ONLY after CI succeeds, then creates/updates the PR and merges it.
-# Flow: first-dev → stage-7-security → stage-9-final → main
-name: Promote on CI success
+name: storystream-promotions
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["storystream-ci"]
     types: [completed]
 
 permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: promote-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
 jobs:
-  choose:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: ubuntu-latest
-    outputs:
-      from: ${{ steps.pick.outputs.from }}
-      to: ${{ steps.pick.outputs.to }}
-      sha: ${{ steps.sha.outputs.sha }}
-      repo: ${{ steps.repo.outputs.repo }}
-      owner: ${{ steps.repo.outputs.owner }}
-    steps:
-      - id: repo
-        run: |
-          FULL="${{ github.event.workflow_run.repository.full_name }}"
-          echo "repo=${FULL#*/}" >> $GITHUB_OUTPUT
-          echo "owner=${FULL%%/*}" >> $GITHUB_OUTPUT
-      - id: sha
-        run: echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
-      - id: pick
-        run: |
-          ref="${{ github.event.workflow_run.head_branch }}"
-          case "$ref" in
-            first-dev)        echo "from=first-dev"         >> $GITHUB_OUTPUT; echo "to=stage-7-security" >> $GITHUB_OUTPUT ;;
-            stage-7-security) echo "from=stage-7-security"  >> $GITHUB_OUTPUT; echo "to=stage-9-final"    >> $GITHUB_OUTPUT ;;
-            stage-9-final)    echo "from=stage-9-final"     >> $GITHUB_OUTPUT; echo "to=main"             >> $GITHUB_OUTPUT ;;
-            *) echo "No promotion for branch $ref"; exit 78 ;;
-          esac
-
-  promote:
-    needs: choose
-    if: ${{ always() && needs.choose.outputs.from != '' }}
+  s01:
+    name: first-dev → stage-1-hygiene
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'first-dev'
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update PR, then merge if allowed
-        uses: actions/github-script@v7
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const owner = "${{ needs.choose.outputs.owner }}";
-            const repo  = "${{ needs.choose.outputs.repo }}";
-            const base  = "${{ needs.choose.outputs.to }}";
-            const head  = "${{ needs.choose.outputs.from }}";
-            const sha   = "${{ needs.choose.outputs.sha }}";
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: first-dev → stage-1-hygiene"
+          body: "Auto-promotion after CI success."
+          base: stage-1-hygiene
+          branch: promote/first-dev-to-s1
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
 
-            // 1) Ensure target branch exists (create it from base of head if missing)
-            async function ensureBranchExists(branch) {
-              try {
-                await github.rest.repos.getBranch({ owner, repo, branch });
-              } catch (e) {
-                if (e.status === 404) {
-                  // create branch from current default's HEAD to unblock; caller can retarget later
-                  const def = await github.rest.repos.get({ owner, repo });
-                  const defaultBranch = def.data.default_branch;
-                  const refData = await github.rest.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` });
-                  await github.rest.git.createRef({
-                    owner, repo,
-                    ref: `refs/heads/${branch}`,
-                    sha: refData.data.object.sha
-                  });
-                } else { throw e; }
-              }
-            }
-            await ensureBranchExists(base);
+  s02:
+    name: stage-1-hygiene → stage-2-clippy
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-1-hygiene'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-1-hygiene → stage-2-clippy"
+          body: "Auto-promotion after CI success."
+          base: stage-2-clippy
+          branch: promote/s1-to-s2
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
 
-            // 2) Find existing PR head→base, or create one
-            const prs = await github.rest.pulls.list({
-              owner, repo, state: "open", head: `${owner}:${head}`, base
-            });
-            let pr = prs.data[0];
-            if (!pr) {
-              pr = (await github.rest.pulls.create({
-                owner, repo, base, head,
-                title: `Promote: ${head} → ${base}`,
-                body: `Auto-promotion after CI success for \`${head}\`.\nCommit: ${sha}`
-              })).data;
-            } else {
-              // Update PR body with the new SHA (helps traceability)
-              await github.rest.pulls.update({
-                owner, repo, pull_number: pr.number,
-                body: `Auto-promotion after CI success for \`${head}\`.\nCommit: ${sha}`
-              });
-            }
+  s03:
+    name: stage-2-clippy → stage-3-build
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-2-clippy'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-2-clippy → stage-3-build"
+          body: "Auto-promotion after CI success."
+          base: stage-3-build
+          branch: promote/s2-to-s3
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
 
-            // 3) Try to merge it now (squash). If blocked (reviews/branch rules), leave PR open.
-            try {
-              await github.rest.pulls.merge({
-                owner, repo, pull_number: pr.number,
-                merge_method: "squash"
-              });
-              core.info(`Merged PR #${pr.number} ${head} → ${base}`);
-            } catch (e) {
-              core.warning(`Merge blocked: ${e.message}`);
-              // Add a comment explaining what to do
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: pr.number,
-                body: [
-                  "⚠️ Auto-merge blocked by repository rules (required reviews or checks).",
-                  "Approve the PR or adjust branch protection, then merge.",
-                  `Source: \`${head}\` → Target: \`${base}\`.`
-                ].join("\n")
-              });
-            }
+  s04:
+    name: stage-3-build → stage-4-tests
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-3-build'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-3-build → stage-4-tests"
+          body: "Auto-promotion after CI success."
+          base: stage-4-tests
+          branch: promote/s3-to-s4
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
+
+  s05:
+    name: stage-4-tests → stage-5-coverage
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-4-tests'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-4-tests → stage-5-coverage"
+          body: "Auto-promotion after CI success."
+          base: stage-5-coverage
+          branch: promote/s4-to-s5
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
+
+  s06:
+    name: stage-5-coverage → stage-6-fuzz
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-5-coverage'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-5-coverage → stage-6-fuzz"
+          body: "Auto-promotion after CI success."
+          base: stage-6-fuzz
+          branch: promote/s5-to-s6
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
+
+  s07:
+    name: stage-6-fuzz → stage-7-security
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-6-fuzz'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-6-fuzz → stage-7-security"
+          body: "Auto-promotion after CI success."
+          base: stage-7-security
+          branch: promote/s6-to-s7
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s08:
+    name: stage-7-security → stage-8-performance
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-7-security'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-7-security → stage-8-performance"
+          body: "Auto-promotion after CI success."
+          base: stage-8-performance
+          branch: promote/s7-to-s8
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s09:
+    name: stage-8-performance → stage-9-docs
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-8-performance'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-8-performance → stage-9-docs"
+          body: "Auto-promotion after CI success."
+          base: stage-9-docs
+          branch: promote/s8-to-s9
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s10:
+    name: stage-9-docs → stage-10-flaky
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-9-docs'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-9-docs → stage-10-flaky"
+          body: "Auto-promotion after CI success."
+          base: stage-10-flaky
+          branch: promote/s9-to-s10
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s11:
+    name: stage-10-flaky → stage-11-perf
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-10-flaky'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-10-flaky → stage-11-perf"
+          body: "Auto-promotion after CI success."
+          base: stage-11-perf
+          branch: promote/s10-to-s11
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s12:
+    name: stage-11-perf → stage-12-docs
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-11-perf'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-11-perf → stage-12-docs"
+          body: "Auto-promotion after CI success."
+          base: stage-12-docs
+          branch: promote/s11-to-s12
+          update-branch: true
+          labels: ci, auto-promotion
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s13:
+    name: stage-12-docs → release-candidate
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'stage-12-docs'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: stage-12-docs → release-candidate"
+          body: "Auto-promotion after CI success."
+          base: release-candidate
+          branch: promote/s12-to-rc
+          update-branch: true
+          labels: ci, release
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: rebase
+
+  s14:
+    name: release-candidate → main
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'release-candidate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: ${{ github.event.workflow_run.head_branch }}, fetch-depth: 0 }
+      - id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "Promote: release-candidate → main"
+          body: "Final stage promotion."
+          base: main
+          branch: promote/rc-to-main
+          update-branch: true
+          labels: ci, release
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
