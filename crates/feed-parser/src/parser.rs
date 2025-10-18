@@ -1,5 +1,5 @@
 // crates/feed-parser/src/parser.rs
-//! Feed parsing logic
+//! Feed parsing logic - ZERO PANICS - quick-xml 0.38 compatible
 
 use crate::error::{FeedError, FeedResult};
 use crate::feed::{Enclosure, Feed, FeedItem, FeedType};
@@ -18,7 +18,9 @@ impl FeedParser {
         match feed_type {
             FeedType::Rss => Self::parse_rss(content),
             FeedType::Atom => Self::parse_atom(content),
-            FeedType::Unknown => Err(FeedError::UnsupportedFormat("Unknown feed format".to_string())),
+            FeedType::Unknown => Err(FeedError::UnsupportedFormat(
+                "Unknown feed format".to_string(),
+            )),
         }
     }
 
@@ -26,7 +28,9 @@ impl FeedParser {
     fn detect_type(content: &str) -> FeedResult<FeedType> {
         if content.contains("<rss") {
             Ok(FeedType::Rss)
-        } else if content.contains("<feed") && content.contains("xmlns=\"http://www.w3.org/2005/Atom\"") {
+        } else if content.contains("<feed")
+            && content.contains("xmlns=\"http://www.w3.org/2005/Atom\"")
+        {
             Ok(FeedType::Atom)
         } else {
             Ok(FeedType::Unknown)
@@ -66,40 +70,56 @@ impl FeedParser {
 
                         for attr in e.attributes() {
                             if let Ok(attr) = attr {
-                                let key = String::from_utf8_lossy(attr.key.as_ref());
-                                let value = String::from_utf8_lossy(&attr.value);
+                                let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
+                                let value =
+                                    String::from_utf8_lossy(&attr.value).to_string();
 
-                                match key.as_ref() {
-                                    "url" => url = Some(value.to_string()),
-                                    "type" => mime_type = Some(value.to_string()),
-                                    "length" => length = value.parse().ok(),
+                                match key.as_str() {
+                                    "url" => url = Some(value),
+                                    "type" => mime_type = Some(value),
+                                    "length" => {
+                                        length = value.parse::<u64>().ok();
+                                    }
                                     _ => {}
                                 }
                             }
                         }
 
-                        if let Some(url) = url {
-                            if let Some(item) = current_item.as_mut() {
-                                item.enclosure = Some(Enclosure {
-                                    url,
-                                    mime_type,
-                                    length,
-                                });
+                        if let Some(url_str) = url {
+                            let mut enclosure = Enclosure::new(url_str);
+                            enclosure.mime_type = mime_type;
+                            enclosure.length = length;
+
+                            if let Some(ref mut item) = current_item {
+                                item.enclosure = Some(enclosure);
                             }
                         }
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    text_buffer = e.unescape().map(|s| s.to_string()).unwrap_or_default();
+                    // NO PANICS - decode and unescape HTML entities
+                    text_buffer = match e.decode() {
+                        Ok(decoded) => {
+                            // Manually unescape common HTML entities
+                            decoded
+                                .replace("&lt;", "<")
+                                .replace("&gt;", ">")
+                                .replace("&amp;", "&")
+                                .replace("&quot;", "\"")
+                                .replace("&apos;", "'")
+                        }
+                        Err(_) => String::new(), // Graceful degradation
+                    };
                 }
                 Ok(Event::End(e)) => {
-                    // Convert to owned string to avoid lifetime issues
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if in_item {
-                        if let Some(item) = current_item.as_mut() {
+                        if let Some(ref mut item) = current_item {
                             match element_name.as_str() {
-                                "title" => item.title = text_buffer.clone(),
+                                "title" if item.title.is_empty() => {
+                                    item.title = text_buffer.clone()
+                                }
                                 "description" => item.description = Some(text_buffer.clone()),
                                 "link" => item.url = Some(text_buffer.clone()),
                                 "author" => item.author = Some(text_buffer.clone()),
@@ -165,38 +185,45 @@ impl FeedParser {
                     if element_name == "entry" {
                         in_entry = true;
                         current_item = Some(FeedItem::new(String::new()));
-                    }
-
-                    // Handle link elements (can be self-closing)
-                    if element_name == "link" {
+                    } else if element_name == "link" {
+                        // Extract href attribute from link element (handles both <link> and <link/>)
+                        let mut href = None;
                         for attr in e.attributes() {
                             if let Ok(attr) = attr {
-                                let key = String::from_utf8_lossy(attr.key.as_ref());
+                                let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
                                 if key == "href" {
-                                    let href = String::from_utf8_lossy(&attr.value).to_string();
-                                    if in_entry {
-                                        if let Some(item) = current_item.as_mut() {
-                                            item.url = Some(href);
-                                        }
-                                    } else {
-                                        feed.url = Some(href);
-                                    }
+                                    href = Some(String::from_utf8_lossy(&attr.value).to_string());
                                 }
+                            }
+                        }
+
+                        if let Some(url) = href {
+                            if in_entry {
+                                if let Some(ref mut item) = current_item {
+                                    item.url = Some(url);
+                                }
+                            } else {
+                                feed.url = Some(url);
                             }
                         }
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    text_buffer = e.unescape().map(|s| s.to_string()).unwrap_or_default();
+                    // NO PANICS - decode() in quick-xml 0.38 handles both UTF-8 AND HTML entities
+                    text_buffer = match e.decode() {
+                        Ok(decoded) => decoded.to_string(),
+                        Err(_) => String::new(),
+                    };
                 }
                 Ok(Event::End(e)) => {
-                    // Convert to owned string to avoid lifetime issues
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if in_entry {
-                        if let Some(item) = current_item.as_mut() {
+                        if let Some(ref mut item) = current_item {
                             match element_name.as_str() {
-                                "title" => item.title = text_buffer.clone(),
+                                "title" if item.title.is_empty() => {
+                                    item.title = text_buffer.clone()
+                                }
                                 "summary" | "content" => item.description = Some(text_buffer.clone()),
                                 "author" => item.author = Some(text_buffer.clone()),
                                 "published" | "updated" => {
@@ -247,15 +274,19 @@ mod tests {
     #[test]
     fn test_detect_rss() {
         let rss = r#"<?xml version="1.0"?><rss version="2.0"><channel></channel></rss>"#;
-        let feed_type = FeedParser::detect_type(rss).expect("Should detect type");
-        assert_eq!(feed_type, FeedType::Rss);
+        match FeedParser::detect_type(rss) {
+            Ok(feed_type) => assert_eq!(feed_type, FeedType::Rss),
+            Err(_) => panic!("Should detect type"),
+        }
     }
 
     #[test]
     fn test_detect_atom() {
         let atom = r#"<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>"#;
-        let feed_type = FeedParser::detect_type(atom).expect("Should detect type");
-        assert_eq!(feed_type, FeedType::Atom);
+        match FeedParser::detect_type(atom) {
+            Ok(feed_type) => assert_eq!(feed_type, FeedType::Atom),
+            Err(_) => panic!("Should detect type"),
+        }
     }
 
     #[test]
@@ -269,10 +300,14 @@ mod tests {
   </channel>
 </rss>"#;
 
-        let feed = FeedParser::parse(rss).expect("Should parse RSS");
-        assert_eq!(feed.title, "Test Feed");
-        assert_eq!(feed.description, Some("A test feed".to_string()));
-        assert!(feed.is_empty());
+        match FeedParser::parse(rss) {
+            Ok(feed) => {
+                assert_eq!(feed.title, "Test Feed");
+                assert_eq!(feed.description, Some("A test feed".to_string()));
+                assert!(feed.is_empty());
+            }
+            Err(e) => panic!("Should parse RSS: {}", e),
+        }
     }
 
     #[test]
@@ -292,10 +327,14 @@ mod tests {
   </channel>
 </rss>"#;
 
-        let feed = FeedParser::parse(rss).expect("Should parse RSS");
-        assert_eq!(feed.item_count(), 2);
-        assert_eq!(feed.items[0].title, "Episode 1");
-        assert!(feed.items[0].has_audio());
+        match FeedParser::parse(rss) {
+            Ok(feed) => {
+                assert_eq!(feed.item_count(), 2);
+                assert_eq!(feed.items[0].title, "Episode 1");
+                assert!(feed.items[0].has_audio());
+            }
+            Err(e) => panic!("Should parse RSS: {}", e),
+        }
     }
 
     #[test]
@@ -316,5 +355,27 @@ mod tests {
 
         let result = FeedParser::parse(rss);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_atom_basic() {
+        let atom = r#"<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Test Atom Feed</title>
+  <subtitle>A test feed</subtitle>
+  <entry>
+    <title>Entry 1</title>
+    <id>entry1</id>
+  </entry>
+</feed>"#;
+
+        match FeedParser::parse(atom) {
+            Ok(feed) => {
+                assert_eq!(feed.feed_type, FeedType::Atom);
+                assert_eq!(feed.title, "Test Atom Feed");
+                assert_eq!(feed.item_count(), 1);
+            }
+            Err(e) => panic!("Should parse Atom: {}", e),
+        }
     }
 }

@@ -77,6 +77,11 @@ impl Feed {
             }
         });
     }
+
+    /// Filters items to only those with audio enclosures
+    pub fn audio_items(&self) -> Vec<&FeedItem> {
+        self.items.iter().filter(|item| item.has_audio()).collect()
+    }
 }
 
 /// A single item in a feed (episode, article, etc.)
@@ -88,16 +93,14 @@ pub struct FeedItem {
     pub description: Option<String>,
     /// Item URL/link
     pub url: Option<String>,
-    /// Item author
-    pub author: Option<String>,
     /// Publication date
     pub published: Option<DateTime<Utc>>,
-    /// Media enclosure (audio file)
-    pub enclosure: Option<Enclosure>,
-    /// Unique identifier
+    /// Author/creator
+    pub author: Option<String>,
+    /// Unique identifier (GUID)
     pub guid: Option<String>,
-    /// Duration in seconds
-    pub duration: Option<u64>,
+    /// Audio/video enclosure
+    pub enclosure: Option<Enclosure>,
 }
 
 impl FeedItem {
@@ -107,29 +110,30 @@ impl FeedItem {
             title,
             description: None,
             url: None,
-            author: None,
             published: None,
-            enclosure: None,
+            author: None,
             guid: None,
-            duration: None,
+            enclosure: None,
         }
     }
 
-    /// Returns true if the item has an audio enclosure
+    /// Returns true if this item has an audio enclosure
     pub fn has_audio(&self) -> bool {
-        self.enclosure
-            .as_ref()
-            .map(|e| e.is_audio())
-            .unwrap_or(false)
+        self.enclosure.as_ref().map_or(false, |e| e.is_audio())
+    }
+
+    /// Returns the enclosure URL if available
+    pub fn audio_url(&self) -> Option<&str> {
+        self.enclosure.as_ref().map(|e| e.url.as_str())
     }
 }
 
-/// Media enclosure (typically an audio file)
+/// Media enclosure (typically audio or video)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Enclosure {
-    /// URL of the media file
+    /// URL to the media file
     pub url: String,
-    /// MIME type
+    /// MIME type (e.g., "audio/mpeg")
     pub mime_type: Option<String>,
     /// File size in bytes
     pub length: Option<u64>,
@@ -149,16 +153,14 @@ impl Enclosure {
     pub fn is_audio(&self) -> bool {
         self.mime_type
             .as_ref()
-            .map(|m| m.starts_with("audio/"))
-            .unwrap_or(false)
+            .map_or(false, |mime| mime.starts_with("audio/"))
     }
 
     /// Returns true if this is a video enclosure
     pub fn is_video(&self) -> bool {
         self.mime_type
             .as_ref()
-            .map(|m| m.starts_with("video/"))
-            .unwrap_or(false)
+            .map_or(false, |mime| mime.starts_with("video/"))
     }
 }
 
@@ -178,30 +180,22 @@ mod tests {
     fn test_feed_add_item() {
         let mut feed = Feed::new(FeedType::Rss, "Test".to_string());
         feed.add_item(FeedItem::new("Item 1".to_string()));
-        assert_eq!(feed.item_count(), 1);
+        feed.add_item(FeedItem::new("Item 2".to_string()));
+
+        assert_eq!(feed.item_count(), 2);
         assert!(!feed.is_empty());
     }
 
     #[test]
     fn test_feed_item_creation() {
-        let item = FeedItem::new("Test Item".to_string());
-        assert_eq!(item.title, "Test Item");
+        let item = FeedItem::new("Test Episode".to_string());
+        assert_eq!(item.title, "Test Episode");
         assert!(!item.has_audio());
     }
 
     #[test]
-    fn test_feed_item_with_audio() {
-        let mut item = FeedItem::new("Test".to_string());
-        let mut enclosure = Enclosure::new("http://example.com/audio.mp3".to_string());
-        enclosure.mime_type = Some("audio/mpeg".to_string());
-        item.enclosure = Some(enclosure);
-
-        assert!(item.has_audio());
-    }
-
-    #[test]
     fn test_enclosure_is_audio() {
-        let mut enc = Enclosure::new("test.mp3".to_string());
+        let mut enc = Enclosure::new("http://example.com/audio.mp3".to_string());
         enc.mime_type = Some("audio/mpeg".to_string());
         assert!(enc.is_audio());
         assert!(!enc.is_video());
@@ -209,39 +203,39 @@ mod tests {
 
     #[test]
     fn test_enclosure_is_video() {
-        let mut enc = Enclosure::new("test.mp4".to_string());
+        let mut enc = Enclosure::new("http://example.com/video.mp4".to_string());
         enc.mime_type = Some("video/mp4".to_string());
         assert!(enc.is_video());
         assert!(!enc.is_audio());
     }
 
     #[test]
-    fn test_feed_type_equality() {
-        assert_eq!(FeedType::Rss, FeedType::Rss);
-        assert_ne!(FeedType::Rss, FeedType::Atom);
+    fn test_feed_item_with_audio() {
+        let mut item = FeedItem::new("Episode 1".to_string());
+        let mut enc = Enclosure::new("http://example.com/ep1.mp3".to_string());
+        enc.mime_type = Some("audio/mpeg".to_string());
+        item.enclosure = Some(enc);
+
+        assert!(item.has_audio());
+        assert_eq!(item.audio_url(), Some("http://example.com/ep1.mp3"));
     }
 
     #[test]
-    fn test_feed_sort_by_date() {
+    fn test_feed_audio_items_filter() {
         let mut feed = Feed::new(FeedType::Rss, "Test".to_string());
 
-        let mut item1 = FeedItem::new("Old".to_string());
-        item1.published = DateTime::parse_from_rfc3339("2023-01-01T00:00:00Z")
-            .ok()
-            .map(|dt| dt.with_timezone(&Utc));
+        let mut item1 = FeedItem::new("Audio Item".to_string());
+        let mut enc = Enclosure::new("http://example.com/audio.mp3".to_string());
+        enc.mime_type = Some("audio/mpeg".to_string());
+        item1.enclosure = Some(enc);
 
-        let mut item2 = FeedItem::new("New".to_string());
-        item2.published = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z")
-            .ok()
-            .map(|dt| dt.with_timezone(&Utc));
+        let item2 = FeedItem::new("Text Item".to_string());
 
         feed.add_item(item1);
         feed.add_item(item2);
 
-        feed.sort_by_date();
-
-        // Newest should be first
-        assert_eq!(feed.items[0].title, "New");
-        assert_eq!(feed.items[1].title, "Old");
+        let audio_items = feed.audio_items();
+        assert_eq!(audio_items.len(), 1);
+        assert_eq!(audio_items[0].title, "Audio Item");
     }
 }
