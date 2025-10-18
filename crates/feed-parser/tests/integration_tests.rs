@@ -6,20 +6,20 @@ use storystream_feed_parser::{FeedParser, FeedType};
 #[test]
 fn test_parse_complex_rss_feed() {
     let rss = r#"<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+<rss version="2.0" xmlns:itunes="https://www.itunes.com/dtds/podcast-1.0.dtd">
   <channel>
     <title>The Great Audiobook Podcast</title>
     <description>Classic literature read aloud</description>
-    <link>http://example.com/podcast</link>
+    <link>https://example.com/podcast</link>
     <language>en-us</language>
 
     <item>
       <title>Pride and Prejudice - Chapter 1</title>
       <description>It is a truth universally acknowledged...</description>
-      <link>http://example.com/pride1</link>
-      <guid>http://example.com/pride1</guid>
+      <link>https://example.com/pride1</link>
+      <guid>https://example.com/pride1</guid>
       <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
-      <enclosure url="http://example.com/pride1.mp3" type="audio/mpeg" length="10000000"/>
+      <enclosure url="https://example.com/pride1.mp3" type="audio/mpeg" length="10000000"/>
       <author>Jane Austen</author>
     </item>
 
@@ -27,7 +27,7 @@ fn test_parse_complex_rss_feed() {
       <title>Pride and Prejudice - Chapter 2</title>
       <description>Mr. Bennet was among the earliest...</description>
       <pubDate>Tue, 02 Jan 2024 12:00:00 GMT</pubDate>
-      <enclosure url="http://example.com/pride2.mp3" type="audio/mpeg" length="9500000"/>
+      <enclosure url="https://example.com/pride2.mp3" type="audio/mpeg" length="9500000"/>
     </item>
   </channel>
 </rss>"#;
@@ -40,7 +40,7 @@ fn test_parse_complex_rss_feed() {
         feed.description,
         Some("Classic literature read aloud".to_string())
     );
-    assert_eq!(feed.url, Some("http://example.com/podcast".to_string()));
+    assert_eq!(feed.url, Some("https://example.com/podcast".to_string()));
     assert_eq!(feed.language, Some("en-us".to_string()));
     assert_eq!(feed.item_count(), 2);
 
@@ -48,14 +48,14 @@ fn test_parse_complex_rss_feed() {
     let item1 = &feed.items[0];
     assert_eq!(item1.title, "Pride and Prejudice - Chapter 1");
     assert!(item1.description.is_some());
-    assert_eq!(item1.url, Some("http://example.com/pride1".to_string()));
+    assert_eq!(item1.url, Some("https://example.com/pride1".to_string()));
     assert_eq!(item1.author, Some("Jane Austen".to_string()));
     assert!(item1.published.is_some());
     assert!(item1.has_audio());
 
     // Check enclosure
     let enclosure = item1.enclosure.as_ref().expect("Should have enclosure");
-    assert_eq!(enclosure.url, "http://example.com/pride1.mp3");
+    assert_eq!(enclosure.url, "https://example.com/pride1.mp3");
     assert_eq!(enclosure.mime_type, Some("audio/mpeg".to_string()));
     assert_eq!(enclosure.length, Some(10000000));
 }
@@ -63,14 +63,14 @@ fn test_parse_complex_rss_feed() {
 #[test]
 fn test_parse_atom_feed() {
     let atom = r#"<?xml version="1.0" encoding="UTF-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<feed xmlns="https://www.w3.org/2005/Atom">
   <title>Atom Audiobook Feed</title>
   <subtitle>Books in Atom format</subtitle>
-  <link href="http://example.com/atom"/>
+  <link href="https://example.com/atom"/>
 
   <entry>
     <title>Moby Dick - Part 1</title>
-    <link href="http://example.com/moby1"/>
+    <link href="https://example.com/moby1"/>
     <id>urn:uuid:1234</id>
     <published>2024-01-01T12:00:00Z</published>
     <summary>Call me Ishmael...</summary>
@@ -95,7 +95,7 @@ fn test_parse_atom_feed() {
 
     let item1 = &feed.items[0];
     assert_eq!(item1.title, "Moby Dick - Part 1");
-    assert_eq!(item1.url, Some("http://example.com/moby1".to_string()));
+    assert_eq!(item1.url, Some("https://example.com/moby1".to_string()));
     assert!(item1.published.is_some());
 }
 
@@ -137,19 +137,19 @@ fn test_multiple_audio_formats() {
     <title>Multi-Format Feed</title>
     <item>
       <title>MP3 Episode</title>
-      <enclosure url="http://example.com/ep1.mp3" type="audio/mpeg"/>
+      <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg"/>
     </item>
     <item>
       <title>OGG Episode</title>
-      <enclosure url="http://example.com/ep2.ogg" type="audio/ogg"/>
+      <enclosure url="https://example.com/ep2.ogg" type="audio/ogg"/>
     </item>
     <item>
       <title>M4A Episode</title>
-      <enclosure url="http://example.com/ep3.m4a" type="audio/mp4"/>
+      <enclosure url="https://example.com/ep3.m4a" type="audio/mp4"/>
     </item>
     <item>
       <title>Video Episode</title>
-      <enclosure url="http://example.com/ep4.mp4" type="video/mp4"/>
+      <enclosure url="https://example.com/ep4.mp4" type="video/mp4"/>
     </item>
   </channel>
 </rss>"#;
@@ -208,8 +208,44 @@ fn test_feed_with_special_characters() {
 </rss>"#;
 
     let feed = FeedParser::parse(rss).expect("Should handle special chars");
-    assert!(feed.title.contains("&"));
-    assert!(feed.title.contains("<"));
+
+    // Debug output to help diagnose the issue
+    eprintln!("Feed title: {:?}", feed.title);
+    eprintln!("Feed title bytes: {:?}", feed.title.as_bytes());
+
+    // XML entities should be decoded:
+    // &amp; → &
+    // &lt; → <
+    // &gt; → >
+    assert!(
+        feed.title.contains('&'),
+        "Feed title should contain '&' character. Got: {:?}",
+        feed.title
+    );
+    assert!(
+        feed.title.contains('<'),
+        "Feed title should contain '<' character. Got: {:?}",
+        feed.title
+    );
+    assert!(
+        feed.title.contains('>'),
+        "Feed title should contain '>' character. Got: {:?}",
+        feed.title
+    );
+
+    // Verify the full expected string
+    assert_eq!(
+        feed.title,
+        "Feed with & Special <Characters>",
+        "Feed title should have all XML entities decoded"
+    );
+
+    // Check item title too
+    assert!(feed.items[0].title.contains('&'));
+    assert_eq!(
+        feed.items[0].title,
+        "Episode with \"Quotes\" & Symbols"
+    );
 }
 
 #[test]
@@ -301,7 +337,7 @@ fn test_large_feed_performance() {
             r#"
     <item>
       <title>Episode {}</title>
-      <enclosure url="http://example.com/ep{}.mp3" type="audio/mpeg"/>
+      <enclosure url="https://example.com/ep{}.mp3" type="audio/mpeg"/>
     </item>"#,
             i, i
         ));

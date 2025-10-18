@@ -1,5 +1,6 @@
 // crates/feed-parser/src/parser.rs
 //! Feed parsing logic - ZERO PANICS - quick-xml 0.38 compatible
+//! FIXED: Text accumulation across multiple Text events
 
 use crate::error::{FeedError, FeedResult};
 use crate::feed::{Enclosure, Feed, FeedItem, FeedType};
@@ -29,7 +30,8 @@ impl FeedParser {
         if content.contains("<rss") {
             Ok(FeedType::Rss)
         } else if content.contains("<feed")
-            && content.contains("xmlns=\"http://www.w3.org/2005/Atom\"")
+            && (content.contains("xmlns=\"http://www.w3.org/2005/Atom\"")
+            || content.contains("http://www.w3.org/2005/Atom"))
         {
             Ok(FeedType::Atom)
         } else {
@@ -40,7 +42,7 @@ impl FeedParser {
     /// Parses an RSS feed
     fn parse_rss(content: &str) -> FeedResult<Feed> {
         let mut reader = Reader::from_str(content);
-        reader.config_mut().trim_text(true);
+        // DON'T trim_text - it removes spaces around decoded entities!
 
         let mut feed = Feed::new(FeedType::Rss, String::new());
         let mut current_item: Option<FeedItem> = None;
@@ -97,38 +99,33 @@ impl FeedParser {
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    // NO PANICS - decode and unescape HTML entities
-                    text_buffer = match e.decode() {
-                        Ok(decoded) => {
-                            // Manually unescape common HTML entities
-                            decoded
-                                .replace("&lt;", "<")
-                                .replace("&gt;", ">")
-                                .replace("&amp;", "&")
-                                .replace("&quot;", "\"")
-                                .replace("&apos;", "'")
-                        }
-                        Err(_) => String::new(), // Graceful degradation
-                    };
+                    // CRITICAL: unescape() handles HTML entities (&amp; → &, &lt; → <, etc.)
+                    match e.unescape() {
+                        Ok(unescaped) => text_buffer.push_str(&unescaped),
+                        Err(_) => {}, // Skip bad text
+                    }
                 }
                 Ok(Event::End(e)) => {
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if in_item {
                         if let Some(ref mut item) = current_item {
+                            // Trim whitespace from accumulated text
+                            let trimmed = text_buffer.trim();
+
                             match element_name.as_str() {
                                 "title" if item.title.is_empty() => {
-                                    item.title = text_buffer.clone()
+                                    item.title = trimmed.to_string()
                                 }
-                                "description" => item.description = Some(text_buffer.clone()),
-                                "link" => item.url = Some(text_buffer.clone()),
-                                "author" => item.author = Some(text_buffer.clone()),
+                                "description" => item.description = Some(trimmed.to_string()),
+                                "link" => item.url = Some(trimmed.to_string()),
+                                "author" => item.author = Some(trimmed.to_string()),
                                 "pubDate" => {
-                                    item.published = DateTime::parse_from_rfc2822(&text_buffer)
+                                    item.published = DateTime::parse_from_rfc2822(trimmed)
                                         .ok()
                                         .map(|dt| dt.with_timezone(&chrono::Utc));
                                 }
-                                "guid" => item.guid = Some(text_buffer.clone()),
+                                "guid" => item.guid = Some(trimmed.to_string()),
                                 _ => {}
                             }
                         }
@@ -140,11 +137,14 @@ impl FeedParser {
                             in_item = false;
                         }
                     } else {
+                        // Trim whitespace from accumulated text
+                        let trimmed = text_buffer.trim();
+
                         match element_name.as_str() {
-                            "title" if feed.title.is_empty() => feed.title = text_buffer.clone(),
-                            "description" => feed.description = Some(text_buffer.clone()),
-                            "link" => feed.url = Some(text_buffer.clone()),
-                            "language" => feed.language = Some(text_buffer.clone()),
+                            "title" if feed.title.is_empty() => feed.title = trimmed.to_string(),
+                            "description" => feed.description = Some(trimmed.to_string()),
+                            "link" => feed.url = Some(trimmed.to_string()),
+                            "language" => feed.language = Some(trimmed.to_string()),
                             _ => {}
                         }
                     }
@@ -168,7 +168,7 @@ impl FeedParser {
     /// Parses an Atom feed
     fn parse_atom(content: &str) -> FeedResult<Feed> {
         let mut reader = Reader::from_str(content);
-        reader.config_mut().trim_text(true);
+        // DON'T trim_text - it removes spaces around decoded entities!
 
         let mut feed = Feed::new(FeedType::Atom, String::new());
         let mut current_item: Option<FeedItem> = None;
@@ -209,29 +209,32 @@ impl FeedParser {
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    // NO PANICS - decode() in quick-xml 0.38 handles both UTF-8 AND HTML entities
-                    text_buffer = match e.decode() {
-                        Ok(decoded) => decoded.to_string(),
-                        Err(_) => String::new(),
-                    };
+                    // CRITICAL: unescape() handles HTML entities (&amp; → &, &lt; → <, etc.)
+                    match e.unescape() {
+                        Ok(unescaped) => text_buffer.push_str(&unescaped),
+                        Err(_) => {}, // Skip bad text
+                    }
                 }
                 Ok(Event::End(e)) => {
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if in_entry {
                         if let Some(ref mut item) = current_item {
+                            // Trim whitespace from accumulated text
+                            let trimmed = text_buffer.trim();
+
                             match element_name.as_str() {
                                 "title" if item.title.is_empty() => {
-                                    item.title = text_buffer.clone()
+                                    item.title = trimmed.to_string()
                                 }
-                                "summary" | "content" => item.description = Some(text_buffer.clone()),
-                                "author" => item.author = Some(text_buffer.clone()),
+                                "summary" | "content" => item.description = Some(trimmed.to_string()),
+                                "author" => item.author = Some(trimmed.to_string()),
                                 "published" | "updated" => {
-                                    item.published = DateTime::parse_from_rfc3339(&text_buffer)
+                                    item.published = DateTime::parse_from_rfc3339(trimmed)
                                         .ok()
                                         .map(|dt| dt.with_timezone(&chrono::Utc));
                                 }
-                                "id" => item.guid = Some(text_buffer.clone()),
+                                "id" => item.guid = Some(trimmed.to_string()),
                                 _ => {}
                             }
                         }
@@ -243,9 +246,12 @@ impl FeedParser {
                             in_entry = false;
                         }
                     } else {
+                        // Trim whitespace from accumulated text
+                        let trimmed = text_buffer.trim();
+
                         match element_name.as_str() {
-                            "title" if feed.title.is_empty() => feed.title = text_buffer.clone(),
-                            "subtitle" => feed.description = Some(text_buffer.clone()),
+                            "title" if feed.title.is_empty() => feed.title = trimmed.to_string(),
+                            "subtitle" => feed.description = Some(trimmed.to_string()),
                             _ => {}
                         }
                     }
