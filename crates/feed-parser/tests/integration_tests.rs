@@ -309,7 +309,7 @@ fn test_date_parsing_rfc2822() {
 #[test]
 fn test_atom_date_parsing_rfc3339() {
     let atom = r#"<?xml version="1.0"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
+<feed xmlns="https://www.w3.org/2005/Atom">
   <title>Date Test</title>
   <entry>
     <title>Item</title>

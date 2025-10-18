@@ -1,6 +1,8 @@
 // crates/feed-parser/src/parser.rs
-//! Feed parsing logic - ZERO PANICS - quick-xml 0.38 compatible
-//! FIXED: Text accumulation across multiple Text events
+//! Feed parsing logic - ZERO PANICS - quick-xml 0.36 compatible
+//! SECURITY: Uses HTTPS URLs in tests and documentation
+//! FIXED: HTML entity unescaping working correctly with quick-xml 0.36
+//! FIXED: Atom https namespace support
 
 use crate::error::{FeedError, FeedResult};
 use crate::feed::{Enclosure, Feed, FeedItem, FeedType};
@@ -31,7 +33,9 @@ impl FeedParser {
             Ok(FeedType::Rss)
         } else if content.contains("<feed")
             && (content.contains("xmlns=\"http://www.w3.org/2005/Atom\"")
-            || content.contains("http://www.w3.org/2005/Atom"))
+            || content.contains("xmlns=\"https://www.w3.org/2005/Atom\"")
+            || content.contains("http://www.w3.org/2005/Atom")
+            || content.contains("https://www.w3.org/2005/Atom"))
         {
             Ok(FeedType::Atom)
         } else {
@@ -53,56 +57,49 @@ impl FeedParser {
 
         loop {
             match reader.read_event_into(&mut buf) {
-                Ok(Event::Start(e)) => {
+                Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
                     let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
 
                     if element_name == "item" {
                         in_item = true;
                         current_item = Some(FeedItem::new(String::new()));
-                    }
-                }
-                Ok(Event::Empty(e)) => {
-                    // Handle self-closing tags like <enclosure ... />
-                    let element_name = String::from_utf8_lossy(e.name().as_ref()).to_string();
-
-                    if element_name == "enclosure" && in_item {
-                        let mut url = None;
+                    } else if element_name == "enclosure" {
+                        // Parse enclosure attributes
+                        let mut url = String::new();
                         let mut mime_type = None;
                         let mut length = None;
 
                         for attr in e.attributes() {
                             if let Ok(attr) = attr {
                                 let key = String::from_utf8_lossy(attr.key.as_ref()).to_string();
-                                let value =
-                                    String::from_utf8_lossy(&attr.value).to_string();
+                                let value = String::from_utf8_lossy(&attr.value).to_string();
 
                                 match key.as_str() {
-                                    "url" => url = Some(value),
+                                    "url" => url = value,
                                     "type" => mime_type = Some(value),
-                                    "length" => {
-                                        length = value.parse::<u64>().ok();
-                                    }
+                                    "length" => length = value.parse().ok(),
                                     _ => {}
                                 }
                             }
                         }
 
-                        if let Some(url_str) = url {
-                            let mut enclosure = Enclosure::new(url_str);
-                            enclosure.mime_type = mime_type;
-                            enclosure.length = length;
-
+                        if !url.is_empty() {
                             if let Some(ref mut item) = current_item {
-                                item.enclosure = Some(enclosure);
+                                let mut enc = Enclosure::new(url);
+                                enc.mime_type = mime_type;
+                                enc.length = length;
+                                item.enclosure = Some(enc);
                             }
                         }
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    // CRITICAL: unescape() handles HTML entities (&amp; → &, &lt; → <, etc.)
-                    match e.unescape() {
-                        Ok(unescaped) => text_buffer.push_str(&unescaped),
-                        Err(_) => {}, // Skip bad text
+                    // CRITICAL FIX: In quick-xml 0.36, use e.unescape()
+                    // Returns Result<Cow<'_, str>, EscapeError>
+                    // Cow<str> auto-derefs to &str when passed to push_str()
+                    // This decodes HTML entities: &amp; → &, &lt; → <, &gt; → >, etc.
+                    if let Ok(unescaped) = e.unescape() {
+                        text_buffer.push_str(&unescaped);
                     }
                 }
                 Ok(Event::End(e)) => {
@@ -209,10 +206,12 @@ impl FeedParser {
                     }
                 }
                 Ok(Event::Text(e)) => {
-                    // CRITICAL: unescape() handles HTML entities (&amp; → &, &lt; → <, etc.)
-                    match e.unescape() {
-                        Ok(unescaped) => text_buffer.push_str(&unescaped),
-                        Err(_) => {}, // Skip bad text
+                    // CRITICAL FIX: In quick-xml 0.36, use e.unescape()
+                    // Returns Result<Cow<'_, str>, EscapeError>
+                    // Cow<str> auto-derefs to &str when passed to push_str()
+                    // This decodes HTML entities: &amp; → &, &lt; → <, &gt; → >, etc.
+                    if let Ok(unescaped) = e.unescape() {
+                        text_buffer.push_str(&unescaped);
                     }
                 }
                 Ok(Event::End(e)) => {
@@ -296,13 +295,22 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_atom_https() {
+        let atom = r#"<?xml version="1.0"?><feed xmlns="https://www.w3.org/2005/Atom"></feed>"#;
+        match FeedParser::detect_type(atom) {
+            Ok(feed_type) => assert_eq!(feed_type, FeedType::Atom),
+            Err(_) => panic!("Should detect https Atom namespace"),
+        }
+    }
+
+    #[test]
     fn test_parse_minimal_rss() {
         let rss = r#"<?xml version="1.0"?>
 <rss version="2.0">
   <channel>
     <title>Test Feed</title>
     <description>A test feed</description>
-    <link>http://example.com</link>
+    <link>https://example.com</link>
   </channel>
 </rss>"#;
 
@@ -325,7 +333,7 @@ mod tests {
     <item>
       <title>Episode 1</title>
       <description>First episode</description>
-      <enclosure url="http://example.com/ep1.mp3" type="audio/mpeg" length="1000"/>
+      <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg" length="1000"/>
     </item>
     <item>
       <title>Episode 2</title>
@@ -382,6 +390,49 @@ mod tests {
                 assert_eq!(feed.item_count(), 1);
             }
             Err(e) => panic!("Should parse Atom: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_html_entity_unescaping() {
+        let rss = r#"<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <title>Feed with &amp; Special &lt;Characters&gt;</title>
+    <item>
+      <title>Episode with "Quotes" &amp; Symbols</title>
+    </item>
+  </channel>
+</rss>"#;
+
+        match FeedParser::parse(rss) {
+            Ok(feed) => {
+                // Verify HTML entities are properly decoded
+                assert!(
+                    feed.title.contains('&'),
+                    "Feed title should contain ampersand. Got: {:?}",
+                    feed.title
+                );
+                assert!(
+                    feed.title.contains('<'),
+                    "Feed title should contain less-than. Got: {:?}",
+                    feed.title
+                );
+                assert!(
+                    feed.title.contains('>'),
+                    "Feed title should contain greater-than. Got: {:?}",
+                    feed.title
+                );
+                assert_eq!(feed.title, "Feed with & Special <Characters>");
+
+                assert!(
+                    feed.items[0].title.contains('&'),
+                    "Item title should contain ampersand. Got: {:?}",
+                    feed.items[0].title
+                );
+                assert_eq!(feed.items[0].title, "Episode with \"Quotes\" & Symbols");
+            }
+            Err(e) => panic!("Should parse RSS with entities: {}", e),
         }
     }
 }

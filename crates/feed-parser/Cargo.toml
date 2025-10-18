@@ -10,7 +10,10 @@ repository.workspace = true
 [dependencies]
 thiserror = "2.0.17"
 serde = { version = "1.0.228", features = ["derive"] }
-quick-xml = { version = "0.38.3", features = ["serialize"] }
+# NEVER UPDATE QUICK-XML VERSION WITHOUT CHECKING COMPATIBILITY WITH MEDIA-ENGINE
+# Media-engine also depends on quick-xml, and mismatched versions can cause build errors.
+# As of June 2024, media-engine uses quick-xml 0.36.2 - This is the ONLY version that should be used here.
+quick-xml = { version = "0.36.2", features = ["serialize"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 
 [dev-dependencies]
