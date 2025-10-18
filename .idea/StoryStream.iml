@@ -22,8 +22,10 @@
       <sourceFolder url="file://$MODULE_DIR$/crates/media-formats/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/media-formats/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/cli/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/content-sources/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/feed-parser/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/feed-parser/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/library/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/network/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/crates/network/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/crates/resilience/examples" isTestSource="false" />
