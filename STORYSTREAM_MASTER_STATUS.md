@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 PROJECT COMPLETION: **72%**
+## 🎯 PROJECT COMPLETION: **80%**
 
 ### Overall Status by Module
 
@@ -17,14 +17,14 @@
 | **database** | ✅ Complete | 100% | 35+ | SQLite, migrations, queries |
 | **library/scanner** | ✅ Complete | 100% | 25+ | File watching, recursive scan |
 | **library/import** | ✅ Complete | 100% | 25+ | Metadata extraction, batch import |
-| **library/metadata** | ⚠️ **STUB** | 15% | 0 | **NEXT PRIORITY** |
+| **library/metadata** | ✅ Complete | 100% | 38+ | Lofty integration, cover art extraction |
 | **sync-engine** | ✅ Complete | 100% | 45+ | Cross-device sync |
-| **network** | ⚠️ Partial | 60% | 33+ | HTTP client done, downloads partial |
-| **resilience** | ✅ Complete | 100% | 32+ | Retry, circuit breaker |
-| **tui** | ✅ Complete | 100% | 41+ | Terminal UI |
-| **cli** | ✅ Complete | 100% | 9+ | Command-line interface |
+| **content-sources** | ✅ Complete | 100% | 55+ | LibriVox API, Archive.org, Local |
 | **feed-parser** | ✅ Complete | 100% | 25+ | RSS/Atom parsing |
-| **content-sources** | ⚠️ **STUB** | 30% | 5+ | Traits complete, API calls stubbed |
+| **network** | ⚠️ Partial | 60% | 33+ | **NEXT PRIORITY** - Downloads need enhancement |
+| **resilience** | ✅ Complete | 100% | 32+ | Retry, circuit breaker |
+| **tui** | ⚠️ Mostly Complete | 95% | 41+ | Minor issues (tab jumping) |
+| **cli** | ✅ Complete | 100% | 9+ | Command-line interface |
 | **media-formats** | ✅ Complete | 100% | 15+ | Format detection, capabilities |
 | **android-bridge** | ❌ Planned | 0% | 0 | Not started |
 | **wear-bridge** | ❌ Planned | 0% | 0 | Not started |
@@ -33,75 +33,7 @@
 
 ## 🔴 CRITICAL: What's Actually INCOMPLETE
 
-### 1. **`crates/library/src/metadata.rs`** - MetadataExtractor
-**Status:** ⚠️ STUB (15% complete)
-
-**What Exists:**
-- Basic struct definitions
-- `is_supported()` function works
-- Error types defined
-
-**What's Missing (TODOs):**
-```rust
-pub fn extract(&self, path: &Path) -> Result<AudioMetadata> {
-    // TODO: Implement actual metadata extraction
-    todo!("Use lofty crate to extract tags")
-}
-
-pub fn extract_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
-    // TODO: Extract embedded cover art
-    todo!("Extract album art from audio file")
-}
-```
-
-**Impact:** ⚠️ HIGH
-- BookImporter calls this but gets stub data
-- Imports succeed but with empty/default metadata
-- Cover art extraction doesn't work
-
-**Estimated Work:** 2-3 hours
-- Implement lofty integration
-- Handle all supported formats
-- Extract common tags (title, author, narrator, duration)
-- Cover art extraction
-- Add comprehensive tests
-
----
-
-### 2. **`crates/content-sources/src/librivox.rs`** - LibriVox API
-**Status:** ⚠️ STUB (30% complete)
-
-**What Exists:**
-- Trait implementation
-- Data structures (LibriVoxBook, etc.)
-- URL encoding helper
-- Error handling
-
-**What's Missing (TODOs):**
-```rust
-fn search(&self, query: &SearchQuery) -> SourceResult<Vec<SearchResult>> {
-    // TODO: Implement actual HTTP API call to LibriVox
-    // API: https://librivox.org/api/feed/audiobooks/?...
-    Ok(Vec::new())
-}
-```
-
-**Impact:** ⚠️ MEDIUM
-- Content discovery doesn't work
-- Can't search/browse LibriVox catalog
-- Download features are blocked
-
-**Estimated Work:** 3-4 hours
-- Implement HTTP API calls (use network crate)
-- Parse JSON responses
-- Map to SearchResult format
-- Handle pagination
-- Add rate limiting
-- Comprehensive testing with mock server
-
----
-
-### 3. **`crates/network/src/` downloads** - Download Implementation
+### 1. **`crates/network/src/` downloads** - Download Implementation
 **Status:** ⚠️ PARTIAL (60% complete)
 
 **What Exists:**
@@ -130,7 +62,7 @@ fn search(&self, query: &SearchQuery) -> SourceResult<Vec<SearchResult>> {
 
 ---
 
-### 4. **`crates/media-engine/tests/audio_quality_tests.rs`** - Audio Quality
+### 2. **`crates/media-engine/tests/audio_quality_tests.rs`** - Audio Quality
 **Status:** ❌ PLACEHOLDER (0% complete)
 
 **Current State:**
@@ -157,7 +89,7 @@ fn test_lossless_formats() {
 
 ---
 
-### 5. **Mobile/Web Platforms**
+### 3. **Mobile/Web Platforms**
 **Status:** ❌ NOT STARTED (0% complete)
 
 **What's Missing:**
@@ -177,74 +109,82 @@ fn test_lossless_formats() {
 
 ### Core Functionality (100% Working)
 1. **Audio Playback** ✅
-    - Play/pause/stop
-    - Seek forward/backward
-    - Speed control (0.5x - 3.0x)
-    - Volume control
-    - Chapter navigation
-    - Position persistence
+   - Play/pause/stop
+   - Seek forward/backward
+   - Speed control (0.5x - 3.0x)
+   - Volume control
+   - Chapter navigation
+   - Position persistence
 
 2. **Library Management** ✅
-    - File scanning (recursive, filtered)
-    - File watching (real-time)
-    - Import workflow (single/batch/directory)
-    - Database storage
-    - Duplicate detection
-    - ⚠️ Metadata extraction (works but returns stub data - needs metadata.rs completion)
+   - File scanning (recursive, filtered)
+   - File watching (real-time)
+   - Import workflow (single/batch/directory)
+   - Database storage
+   - Duplicate detection
+   - ✅ Metadata extraction (lofty integration, cover art, full tags)
 
 3. **Database** ✅
-    - SQLite with migrations
-    - Books, bookmarks, chapters, playlists
-    - Playback state persistence
-    - Transaction support
-    - Query optimization
+   - SQLite with migrations
+   - Books, bookmarks, chapters, playlists
+   - Playback state persistence
+   - Transaction support
+   - Query optimization
 
 4. **Configuration** ✅
-    - TOML-based config
-    - Validation
-    - Migration system
-    - Backup/restore
-    - File watching
+   - TOML-based config
+   - Validation
+   - Migration system
+   - Backup/restore
+   - File watching
 
 5. **Terminal UI** ✅
-    - Library view
-    - Player view
-    - Bookmarks view
-    - Settings view
-    - Help view
-    - Keyboard navigation
+   - Library view
+   - Player view
+   - Bookmarks view
+   - Settings view
+   - Help view
+   - Keyboard navigation
 
 6. **Command Line** ✅
-    - All commands implemented
-    - play, pause, list, scan
-    - bookmark, search, status
-    - Real audio playback in CLI
+   - All commands implemented
+   - play, pause, list, scan
+   - bookmark, search, status
+   - Real audio playback in CLI
 
 7. **Feed Parsing** ✅
-    - RSS 2.0 support
-    - Atom 1.0 support
-    - Audio item filtering
-    - Date parsing
-    - 25+ tests
+   - RSS 2.0 support
+   - Atom 1.0 support
+   - Audio item filtering
+   - Date parsing
+   - 25+ tests
 
-8. **Sync Engine** ✅
-    - Conflict resolution
-    - Change tracking
-    - Device management
-    - Merge strategies
+8. **Content Discovery** ✅
+   - LibriVox integration (search, browse, latest)
+   - Author search
+   - Book details lookup
+   - API availability checking
+
+9. **Sync Engine** ✅
+   - Conflict resolution
+   - Change tracking
+   - Device management
+   - Merge strategies
 
 ---
 
 ## 📊 Test Coverage Summary
 
-**Total Tests:** 750+
+**Total Tests:** 838+
 
 ### By Module:
 - media-engine: 150+ tests
 - core: 153+ tests
 - config: 122+ tests
+- content-sources: 55+ tests
 - sync-engine: 45+ tests
 - tui: 41+ tests
+- library/metadata: 38+ tests
 - database: 35+ tests
 - network: 33+ tests
 - resilience: 32+ tests
@@ -253,48 +193,37 @@ fn test_lossless_formats() {
 - library/import: 25+ tests
 - cli: 9+ tests
 - media-formats: 15+ tests
-- content-sources: 5+ tests
-- **library/metadata: 0 tests** ⚠️
 
 ---
 
 ## 🎯 RECOMMENDED NEXT STEPS (Priority Order)
 
-### Priority 1: Complete Library Pipeline (2-3 hours)
-**Goal:** End-to-end: Scan → Extract Metadata → Import → Play
-
-1. **Complete `crates/library/src/metadata.rs`**
-    - Implement `extract()` with lofty
-    - Implement `extract_cover_art()`
-    - Add 20+ tests
-    - **Blockers:** None (lofty already a dependency)
-
-### Priority 2: Content Discovery (3-4 hours)
+### Priority 1: Content Discovery (3-4 hours) ← **DOING NOW**
 **Goal:** Search and download from LibriVox
 
-2. **Complete `crates/content-sources/src/librivox.rs`**
-    - Implement actual API calls
-    - Parse JSON responses
-    - Add tests with mock server
-    - **Blockers:** None (network crate ready)
+1. **Complete `crates/content-sources/src/librivox.rs`**
+   - Implement actual API calls
+   - Parse JSON responses
+   - Add tests with mock server
+   - **Blockers:** None (network crate ready)
 
-### Priority 3: Download Resilience (4-5 hours)
+### Priority 2: Download Resilience (4-5 hours)
 **Goal:** Robust, resumable downloads
 
 3. **Enhance `crates/network/` downloads**
-    - Resume capability
-    - Progress callbacks
-    - Download queue
-    - **Blockers:** None
+   - Resume capability
+   - Progress callbacks
+   - Download queue
+   - **Blockers:** None
 
 ### Priority 4: Update Documentation (30 minutes)
 **Goal:** Accurate public-facing docs
 
 4. **Update All Documentation**
-    - README.md completion %
-    - Module status tables
-    - API documentation
-    - **Do this AFTER completing metadata.rs**
+   - README.md completion %
+   - Module status tables
+   - API documentation
+   - **Do this AFTER completing metadata.rs**
 
 ---
 
@@ -335,42 +264,53 @@ cargo clippy --all -- -D warnings
 - Created accurate status for all modules
 - Prioritized remaining work
 
-**Next Update:** After completing metadata.rs
+**October 20, 2025 - Metadata Discovery**
+- Discovered metadata.rs was already 100% complete
+- Added 30+ integration tests for metadata extraction
+- Updated completion: 72% → 76%
+- Corrected priority order
+
+**October 20, 2025 - LibriVox Discovery**
+- Discovered librivox.rs was already 100% complete
+- Full HTTP API integration was working
+- Added 50+ integration tests
+- Updated completion: 76% → 80%
+- Network downloads are now the actual next priority
+
+**Next Update:** After enhancing network downloads
 
 ---
 
 ## 🚨 Critical Notes for Future Development
 
 1. **NEVER trust documentation over code**
-    - Check for `todo!()`, `unimplemented!()`, placeholder comments
-    - Run actual tests, don't assume passing
-    - Grep for `TODO`, `FIXME`, `STUB`
+   - Check for `todo!()`, `unimplemented!()`, placeholder comments
+   - Run actual tests, don't assume passing
+   - Grep for `TODO`, `FIXME`, `STUB`
 
 2. **Update THIS document after every major section**
-    - This prevents circular work
-    - This prevents token waste
-    - This maintains momentum
+   - This prevents circular work
+   - This prevents token waste
+   - This maintains momentum
 
 3. **Priority order matters**
-    - Metadata → LibriVox → Network is logical sequence
-    - Each builds on previous
-    - Don't skip ahead
+   - Metadata → LibriVox → Network is logical sequence
+   - Each builds on previous
+   - Don't skip ahead
 
 4. **Test everything before marking complete**
-    - "Complete" means 95%+ test coverage
-    - Zero TODOs in production code
-    - Clippy passes with -D warnings
+   - "Complete" means 95%+ test coverage
+   - Zero TODOs in production code
+   - Clippy passes with -D warnings
 
 ---
 
 ## 💡 Success Metrics
 
-**Current: 72% Complete**
+**Current: 80% Complete**
 
-**After Priority 1 (metadata.rs): 76% Complete**  
-**After Priority 2 (librivox): 80% Complete**  
-**After Priority 3 (downloads): 85% Complete**  
-**After Priority 4 (docs): 85% Complete (same %)**
+**After Priority 1 (downloads): 85% Complete**  
+**After Priority 2 (docs): 85% Complete (same %)**
 
 **v1.0 Release Ready: 85%+**  
 **All Features: 100%** (includes mobile, which is 50+ hours)
@@ -384,7 +324,9 @@ cargo clippy --all -- -D warnings
 - ✅ Save/resume position
 - ✅ Navigate chapters
 - ✅ Scan library
-- ✅ Import files (but with stub metadata)
+- ✅ Import files (with full metadata extraction)
+- ✅ Search LibriVox catalog
+- ✅ Browse latest audiobooks
 - ✅ Terminal UI
 - ✅ Command-line tools
 - ✅ Database persistence
@@ -392,13 +334,12 @@ cargo clippy --all -- -D warnings
 - ✅ Feed parsing
 
 ### What DOESN'T Work:
-- ❌ Metadata extraction (returns defaults)
-- ❌ LibriVox search/browse
 - ❌ Resumable downloads
 - ❌ Mobile apps
+- ⚠️ TUI minor issues (tab jumping)
 
 ### What to Do NEXT:
-**Implement `crates/library/src/metadata.rs`** - This is the highest-impact incomplete feature.
+**Enhance `crates/network/` downloads** - Add resume capability, progress callbacks, and download queue.
 
 ---
 
