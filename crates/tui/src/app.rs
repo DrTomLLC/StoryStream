@@ -14,7 +14,7 @@ use std::time::Duration;
 
 /// The main TUI application
 pub struct App {
-    state: AppState,
+    pub state: AppState,
     event_handler: EventHandler,
     theme: Theme,
 }
@@ -48,7 +48,6 @@ impl App {
         Ok(())
     }
 
-    /// Handles mouse events
     /// Handles mouse events with full interactivity
     fn handle_mouse(&mut self, mouse: crossterm::event::MouseEvent) -> TuiResult<()> {
         use crossterm::event::MouseEventKind;
@@ -86,8 +85,8 @@ impl App {
                         7 // Help
                     };
 
-                    // Switch to clicked tab
-                    self.state.view = match tab_index {
+                    // Switch to clicked tab (state preservation happens in set_view)
+                    self.state.set_view(match tab_index {
                         0 => View::Library,
                         1 => View::Player,
                         2 => View::Bookmarks,
@@ -96,74 +95,38 @@ impl App {
                         5 => View::Statistics,
                         6 => View::Settings,
                         _ => View::Help,
-                    };
+                    });
 
-                    self.state.set_status(format!("Switched to {} view",
-                                                  match self.state.view {
-                                                      View::Library => "Library",
-                                                      View::Player => "Player",
-                                                      View::Bookmarks => "Bookmarks",
-                                                      View::Search => "Search",
-                                                      View::Playlists => "Playlists",
-                                                      View::Statistics => "Statistics",
-                                                      View::Settings => "Settings",
-                                                      View::Help => "Help",
-                                                      View::Plugin => "Plugin",
-                                                  }
+                    self.state.set_status(format!(
+                        "Switched to {} view",
+                        match self.state.view {
+                            View::Library => "Library",
+                            View::Player => "Player",
+                            View::Bookmarks => "Bookmarks",
+                            View::Search => "Search",
+                            View::Playlists => "Playlists",
+                            View::Statistics => "Statistics",
+                            View::Settings => "Settings",
+                            View::Help => "Help",
+                            View::Plugin => "Plugin",
+                        }
                     ));
+                    return Ok(());
                 }
-                // Main content area - handle clicks based on current view
-                else if row > 2 && row < mouse.row.saturating_sub(3) {
+
+                // Handle clicks within view content
+                if button == MouseButton::Left {
                     match self.state.view {
-                        View::Library => {
-                            // Click in library list - select item
-                            if button == MouseButton::Left {
-                                // Calculate which item was clicked (approximate)
-                                let item_row = row.saturating_sub(4); // Account for borders
-                                if item_row < self.state.library_items_count as u16 {
-                                    self.state.selected_item = item_row as usize;
-                                    self.state.set_status("Item selected - press Enter to play");
-                                }
-                            } else if button == MouseButton::Right {
-                                self.state.set_status("Right-click menu (coming soon)");
-                            }
-                        }
-                        View::Player => {
-                            // Click on player controls
-                            self.state.playback.is_playing = !self.state.playback.is_playing;
-                            let status = if self.state.playback.is_playing {
-                                "Playing (clicked)"
-                            } else {
-                                "Paused (clicked)"
-                            };
-                            self.state.set_status(status);
-                        }
-                        View::Search => {
-                            // Click in search results
-                            if button == MouseButton::Left {
-                                let item_row = row.saturating_sub(7); // Account for search box
-                                self.state.selected_item = item_row as usize;
-                                self.state.set_status("Search result selected");
-                            }
-                        }
-                        View::Playlists => {
-                            // Click in playlists
-                            if button == MouseButton::Left {
-                                let item_row = row.saturating_sub(4);
-                                self.state.selected_item = item_row as usize;
-                                self.state.set_status("Playlist selected");
+                        View::Library | View::Bookmarks | View::Search => {
+                            // Click on a list item - update selection
+                            // Row 3 onwards is content area
+                            if row >= 3 {
+                                let item_row = (row - 3) as usize;
+                                self.state.selected_item = item_row;
+                                self.state.set_status("Item selected");
                             }
                         }
                         _ => {}
-                    }
-                }
-
-                // Double-click detection would go here
-                if button == MouseButton::Left {
-                    // Simple double-click simulation
-                    if self.state.view == View::Library {
-                        // Simulate: double-click plays the item
-                        // In a real app, you'd track time between clicks
                     }
                 }
             }
@@ -226,19 +189,6 @@ impl App {
                 self.state.set_status(format!("Theme: {}", self.state.theme.name()));
                 return Ok(());
             }
-            KeyCode::Char('/') => {
-                self.state.set_view(View::Search);
-                return Ok(());
-            }
-            KeyCode::Esc => {
-                if self.state.view == View::Help {
-                    self.state.set_view(View::Library);
-                } else if self.state.view == View::Search {
-                    self.state.clear_search();
-                    self.state.set_view(View::Library);
-                }
-                return Ok(());
-            }
             _ => {}
         }
 
@@ -252,10 +202,13 @@ impl App {
             View::Statistics => self.handle_statistics_keys(code, modifiers)?,
             View::Settings => self.handle_settings_keys(code, modifiers)?,
             View::Help => {
-                // Any key handled globally
+                // Help view just needs Esc or h to go back
+                if let KeyCode::Esc = code {
+                    self.state.set_view(View::Library);
+                }
             }
             View::Plugin => {
-                // Plugin handling would go here
+                // Plugin keys handled elsewhere
             }
         }
 
@@ -273,16 +226,22 @@ impl App {
             }
             KeyCode::Enter => {
                 self.state.set_view(View::Player);
-                self.state.playback.is_playing = true;
-                self.state.playback.current_file = Some("Selected audiobook".to_string());
-                self.state.playback.duration = Duration::from_secs(18000); // 5 hours demo
-                self.state.set_status("Started playback");
+                self.state.set_status("Playing selected book");
             }
             KeyCode::Char('s') => {
                 self.state.set_status("Syncing library...");
             }
+            KeyCode::Char('i') => {
+                self.state.set_status("Showing book info");
+            }
             KeyCode::Char('f') => {
                 self.state.set_status("Toggled favorite");
+            }
+            KeyCode::Char('d') => {
+                self.state.set_status("Book deleted (soft)");
+            }
+            KeyCode::Char('/') => {
+                self.state.set_view(View::Search);
             }
             _ => {}
         }
@@ -302,29 +261,26 @@ impl App {
                 self.state.set_status(status);
             }
             KeyCode::Left => {
-                let seek_amount = if modifiers.contains(KeyModifiers::SHIFT) {
-                    30
+                if modifiers.contains(KeyModifiers::SHIFT) {
+                    self.state.playback.position =
+                        self.state.playback.position.saturating_sub(Duration::from_secs(30));
+                    self.state.set_status("Seek backward 30s");
                 } else {
-                    10
-                };
-                if self.state.playback.position >= Duration::from_secs(seek_amount) {
-                    self.state.playback.position -= Duration::from_secs(seek_amount);
-                } else {
-                    self.state.playback.position = Duration::ZERO;
+                    self.state.playback.position =
+                        self.state.playback.position.saturating_sub(Duration::from_secs(10));
+                    self.state.set_status("Seek backward 10s");
                 }
-                self.state.set_status(format!("Seeked backward {}s", seek_amount));
             }
             KeyCode::Right => {
-                let seek_amount = if modifiers.contains(KeyModifiers::SHIFT) {
-                    30
+                if modifiers.contains(KeyModifiers::SHIFT) {
+                    let new_pos = self.state.playback.position + Duration::from_secs(30);
+                    self.state.playback.position = new_pos.min(self.state.playback.duration);
+                    self.state.set_status("Seek forward 30s");
                 } else {
-                    10
-                };
-                self.state.playback.position += Duration::from_secs(seek_amount);
-                if self.state.playback.position > self.state.playback.duration {
-                    self.state.playback.position = self.state.playback.duration;
+                    let new_pos = self.state.playback.position + Duration::from_secs(10);
+                    self.state.playback.position = new_pos.min(self.state.playback.duration);
+                    self.state.set_status("Seek forward 10s");
                 }
-                self.state.set_status(format!("Seeked forward {}s", seek_amount));
             }
             KeyCode::Char('[') => {
                 if self.state.playback.speed > 0.5 {
@@ -345,13 +301,19 @@ impl App {
             KeyCode::Char('+') | KeyCode::Char('=') => {
                 if self.state.playback.volume < 1.0 {
                     self.state.playback.volume = (self.state.playback.volume + 0.1).min(1.0);
-                    self.state.set_status(format!("Volume: {}%", (self.state.playback.volume * 100.0) as u8));
+                    self.state.set_status(format!(
+                        "Volume: {}%",
+                        (self.state.playback.volume * 100.0) as u8
+                    ));
                 }
             }
             KeyCode::Char('-') => {
                 if self.state.playback.volume > 0.0 {
                     self.state.playback.volume = (self.state.playback.volume - 0.1).max(0.0);
-                    self.state.set_status(format!("Volume: {}%", (self.state.playback.volume * 100.0) as u8));
+                    self.state.set_status(format!(
+                        "Volume: {}%",
+                        (self.state.playback.volume * 100.0) as u8
+                    ));
                 }
             }
             KeyCode::Char('0') => {
@@ -417,11 +379,11 @@ impl App {
         match code {
             KeyCode::Char(c) => {
                 self.state.search_query.push(c);
-                self.state.reset_selection();
+                // Don't reset selection when typing
             }
             KeyCode::Backspace => {
                 self.state.search_query.pop();
-                self.state.reset_selection();
+                // Don't reset selection when deleting
             }
             KeyCode::Up => {
                 self.state.select_previous();
@@ -432,6 +394,10 @@ impl App {
             KeyCode::Enter => {
                 self.state.set_view(View::Player);
                 self.state.set_status("Playing selected book");
+            }
+            KeyCode::Esc => {
+                self.state.clear_search_query();
+                self.state.set_view(View::Library);
             }
             _ => {}
         }
@@ -451,13 +417,10 @@ impl App {
                 self.state.set_status("Playing playlist");
             }
             KeyCode::Char('n') => {
-                self.state.set_status("Create new playlist");
-            }
-            KeyCode::Char('a') => {
-                self.state.set_status("Added to playlist");
+                self.state.set_status("New playlist created");
             }
             KeyCode::Char('d') => {
-                self.state.set_status("Deleted playlist");
+                self.state.set_status("Playlist deleted");
             }
             KeyCode::Char('e') => {
                 self.state.set_status("Edit playlist");
@@ -470,17 +433,17 @@ impl App {
     /// Handles statistics view keys
     fn handle_statistics_keys(&mut self, code: KeyCode, _modifiers: KeyModifiers) -> TuiResult<()> {
         match code {
-            KeyCode::Char('r') => {
-                self.state.set_status("Refreshed statistics");
-            }
-            KeyCode::Char('e') => {
-                self.state.set_status("Exported statistics to CSV");
-            }
             KeyCode::Up => {
                 self.state.select_previous();
             }
             KeyCode::Down => {
                 self.state.select_next();
+            }
+            KeyCode::Char('r') => {
+                self.state.set_status("Refreshing statistics...");
+            }
+            KeyCode::Char('e') => {
+                self.state.set_status("Export statistics");
             }
             _ => {}
         }
@@ -521,10 +484,9 @@ impl App {
         Ok(())
     }
 
-    /// Cycles to the next view
-    /// Cycles to the next view (includes ALL views)
-    fn cycle_view(&mut self) {
-        self.state.view = match self.state.view {
+    /// Cycles to the next view (preserves selection state via set_view)
+    pub fn cycle_view(&mut self) {
+        let next_view = match self.state.view {
             View::Library => View::Player,
             View::Player => View::Bookmarks,
             View::Bookmarks => View::Search,
@@ -536,28 +498,29 @@ impl App {
             View::Plugin => View::Library,
         };
 
-        // Reset selection when switching views
-        self.state.reset_selection();
+        // Use set_view which automatically handles state preservation
+        self.state.set_view(next_view);
 
         // Show which view we switched to
-        self.state.set_status(format!("Switched to {} view - explore with arrow keys",
-                                      match self.state.view {
-                                          View::Library => "Library",
-                                          View::Player => "Player",
-                                          View::Bookmarks => "Bookmarks",
-                                          View::Search => "Search",
-                                          View::Playlists => "Playlists",
-                                          View::Statistics => "Statistics",
-                                          View::Settings => "Settings",
-                                          View::Help => "Help",
-                                          View::Plugin => "Plugin",
-                                      }
+        self.state.set_status(format!(
+            "Switched to {} view",
+            match next_view {
+                View::Library => "Library",
+                View::Player => "Player",
+                View::Bookmarks => "Bookmarks",
+                View::Search => "Search",
+                View::Playlists => "Playlists",
+                View::Statistics => "Statistics",
+                View::Settings => "Settings",
+                View::Help => "Help",
+                View::Plugin => "Plugin",
+            }
         ));
     }
 
-    /// Cycles to the previous view
-    fn cycle_view_reverse(&mut self) {
-        self.state.view = match self.state.view {
+    /// Cycles to the previous view (preserves selection state via set_view)
+    pub fn cycle_view_reverse(&mut self) {
+        let prev_view = match self.state.view {
             View::Library => View::Help,
             View::Player => View::Library,
             View::Bookmarks => View::Player,
@@ -568,6 +531,9 @@ impl App {
             View::Help => View::Settings,
             View::Plugin => View::Help,
         };
+
+        // Use set_view which automatically handles state preservation
+        self.state.set_view(prev_view);
     }
 }
 
@@ -615,5 +581,29 @@ mod tests {
         assert_eq!(app.state.view, View::Help);
         app.cycle_view();
         assert_eq!(app.state.view, View::Library);
+    }
+
+    #[test]
+    fn test_cycle_view_preserves_selection() {
+        let mut app = App::new();
+        app.state.library_items_count = 10;
+
+        // Navigate in Library
+        app.state.select_next();
+        app.state.select_next();
+        assert_eq!(app.state.selected_item, 2);
+
+        // Cycle through views
+        app.cycle_view(); // To Player
+        app.cycle_view(); // To Bookmarks
+        app.cycle_view(); // To Search
+        app.cycle_view(); // To Playlists
+        app.cycle_view(); // To Statistics
+        app.cycle_view(); // To Settings
+        app.cycle_view(); // To Help
+        app.cycle_view(); // Back to Library
+
+        // Selection should be preserved
+        assert_eq!(app.state.selected_item, 2);
     }
 }
