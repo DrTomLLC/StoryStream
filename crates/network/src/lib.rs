@@ -1,42 +1,26 @@
 // crates/network/src/lib.rs
 //! Network utilities for HTTP requests and downloads
-//!
-//! This module provides a robust HTTP client with:
-//! - Automatic retries with exponential backoff
-//! - Circuit breaker pattern
-//! - Progress tracking for downloads
-//! - Connectivity checking
-//!
-//! # Example
-//!
-//! ```rust,no_run
-//! use storystream_network::{Client, DownloadManager, ProgressTracker};
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let client = Client::new()?;
-//! let manager = DownloadManager::new(client);
-//!
-//! let progress = ProgressTracker::new(None);
-//! manager.download_file(
-//!     "https://example.com/audiobook.mp3",
-//!     "audiobook.mp3",
-//!     Some(progress)
-//! ).await?;
-//! # Ok(())
-//! # }
-//! ```
 
 mod client;
 mod connectivity;
 mod download;
+mod download_manager;
 mod error;
 mod progress;
+mod resume;
+mod throttle;
 
 pub use client::{Client, ClientConfig};
 pub use connectivity::ConnectivityChecker;
 pub use download::DownloadManager;
+pub use download_manager::{
+    AdvancedDownloadManager, DownloadManagerConfig, DownloadStatus, DownloadTask, Priority,
+    ProgressCallback,
+};
 pub use error::{NetworkError, NetworkResult};
 pub use progress::{DownloadProgress, ProgressTracker};
+pub use resume::{can_resume, ResumeInfo, ResumeManager};
+pub use throttle::{AdaptiveThrottle, BandwidthThrottle};
 
 #[cfg(test)]
 mod tests {
