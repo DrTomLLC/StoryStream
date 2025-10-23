@@ -6,5 +6,71 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Android JNI bridge for StoryStream audiobook player"
+keywords = ["android", "jni", "audiobook", "ffi"]
+categories = ["multimedia::audio", "api-bindings"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+# JNI bindings
+jni = "0.21"
+
+# Error handling
+thiserror = "2.0"
+
+# Logging
+log = "0.4"
+
+# Android-specific logging (optional, only on Android)
+android_logger = { version = "0.14", optional = true }
+
+# Environment logging (for non-Android platforms)
+env_logger = { version = "0.11", optional = true }
+
+# Lazy static initialization
+once_cell = "1.19"
+
+# Workspace dependencies (to be added when integrating with other crates)
+# Commented out until actual integration is implemented
+# storystream-core = { path = "../core" }
+# media-engine = { path = "../media-engine" }
+# storystream-library = { path = "../library" }
+# storystream-database = { path = "../database" }
+
+[dev-dependencies]
+# Testing utilities
+tempfile = "3.8"
+
+[features]
+default = ["android-logger"]
+
+# Android-specific features
+android-logger = ["dep:android_logger"]
+
+# Desktop testing features (for development without Android)
+desktop-testing = ["dep:env_logger"]
+
+[package.metadata.android]
+# Android-specific build configuration
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"]
+
+# Minimum Android API level
+min_sdk_version = 26  # Android 8.0 Oreo
+
+# Target Android API level
+target_sdk_version = 34  # Android 14
+
+[profile.release]
+# Optimize for size on Android
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.dev]
+# Faster builds during development
+opt-level = 0
+debug = true
