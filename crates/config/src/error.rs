@@ -126,8 +126,7 @@ mod tests {
 
     #[test]
     fn test_validation_error_with_value() {
-        let err =
-            ValidationError::with_value("player.volume", "must be between 0 and 100", "150");
+        let err = ValidationError::with_value("player.volume", "must be between 0 and 100", "150");
         assert_eq!(
             err.to_string(),
             "Field 'player.volume': must be between 0 and 100 (got: 150)"

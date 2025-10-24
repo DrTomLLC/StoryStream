@@ -105,7 +105,10 @@ fn property_config_file_size_bounded() -> Result<(), Box<dyn std::error::Error>>
     let mut config = Config::default();
 
     for i in 0..10 {
-        config.library.library_paths.push(std::path::PathBuf::from(format!("/path/{}", i)));
+        config
+            .library
+            .library_paths
+            .push(std::path::PathBuf::from(format!("/path/{}", i)));
     }
 
     manager.save(&config)?;

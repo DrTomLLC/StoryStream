@@ -34,7 +34,10 @@ fn test_parse_complex_rss() {
 
     assert_eq!(feed.feed_type, FeedType::Rss);
     assert_eq!(feed.title, "The Great Audiobook Podcast");
-    assert_eq!(feed.description, Some("Classic literature read aloud".to_string()));
+    assert_eq!(
+        feed.description,
+        Some("Classic literature read aloud".to_string())
+    );
     assert_eq!(feed.url, Some("http://example.com/podcast".to_string()));
     assert_eq!(feed.language, Some("en-us".to_string()));
     assert_eq!(feed.item_count(), 2);

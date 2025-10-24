@@ -65,9 +65,8 @@ impl AudioProperties {
             return Some(1.0);
         }
 
-        self.uncompressed_size().map(|uncompressed| {
-            uncompressed as f32 / self.file_size as f32
-        })
+        self.uncompressed_size()
+            .map(|uncompressed| uncompressed as f32 / self.file_size as f32)
     }
 
     /// Generates a detailed properties report
@@ -84,10 +83,7 @@ impl AudioProperties {
         );
 
         if let Some(duration) = self.duration {
-            report.push_str(&format!(
-                "\nDuration: {}",
-                format_duration(duration)
-            ));
+            report.push_str(&format!("\nDuration: {}", format_duration(duration)));
         }
 
         report.push_str(&format!(
@@ -158,15 +154,14 @@ impl AudioAnalyzer {
             .len();
 
         // Detect format from extension
-        let format = AudioFormat::from_path(path)
-            .ok_or_else(|| {
-                FormatError::unsupported(
-                    path.extension()
-                        .and_then(|e| e.to_str())
-                        .unwrap_or("unknown"),
-                    path.to_path_buf(),
-                )
-            })?;
+        let format = AudioFormat::from_path(path).ok_or_else(|| {
+            FormatError::unsupported(
+                path.extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("unknown"),
+                path.to_path_buf(),
+            )
+        })?;
 
         // Open file
         let file = File::open(path)
@@ -182,12 +177,7 @@ impl AudioAnalyzer {
 
         // Probe the file
         let probed = symphonia::default::get_probe()
-            .format(
-                &hint,
-                mss,
-                &self.format_opts,
-                &self.metadata_opts,
-            )
+            .format(&hint, mss, &self.format_opts, &self.metadata_opts)
             .map_err(|e| FormatError::probe_error(path.to_path_buf(), format!("{:?}", e)))?;
 
         let format_reader = probed.format;
@@ -195,24 +185,16 @@ impl AudioAnalyzer {
         // Get the default track
         let track = format_reader
             .default_track()
-            .ok_or_else(|| {
-                FormatError::probe_error(
-                    path.to_path_buf(),
-                    "No audio tracks found",
-                )
-            })?;
+            .ok_or_else(|| FormatError::probe_error(path.to_path_buf(), "No audio tracks found"))?;
 
         let params = &track.codec_params;
 
         // Extract properties
-        let sample_rate = params.sample_rate.ok_or_else(|| {
-            FormatError::codec_error("Missing sample rate")
-        })?;
+        let sample_rate = params
+            .sample_rate
+            .ok_or_else(|| FormatError::codec_error("Missing sample rate"))?;
 
-        let channels = params
-            .channels
-            .map(|ch| ch.count() as u8)
-            .unwrap_or(2);
+        let channels = params.channels.map(|ch| ch.count() as u8).unwrap_or(2);
 
         let bits_per_sample = params.bits_per_sample.unwrap_or(16) as u8;
 

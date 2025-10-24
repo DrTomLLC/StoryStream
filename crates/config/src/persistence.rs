@@ -37,12 +37,11 @@ impl ConfigPersistence {
             return Ok(Config::default());
         }
 
-        let contents = fs::read_to_string(&self.config_path).map_err(|e| {
-            ConfigError::ReadError {
+        let contents =
+            fs::read_to_string(&self.config_path).map_err(|e| ConfigError::ReadError {
                 path: self.config_path.clone(),
                 source: e,
-            }
-        })?;
+            })?;
 
         // CRITICAL: Check for empty or whitespace-only files
         // These are treated as corrupted, not as valid defaults
@@ -51,15 +50,16 @@ impl ConfigPersistence {
                 path: self.config_path.clone(),
                 source: std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
-                    "Config file is empty or contains only whitespace"
+                    "Config file is empty or contains only whitespace",
                 ),
             });
         }
 
-        let mut config: Config = toml::from_str(&contents).map_err(|e| ConfigError::ParseError {
-            path: self.config_path.clone(),
-            source: e,
-        })?;
+        let mut config: Config =
+            toml::from_str(&contents).map_err(|e| ConfigError::ParseError {
+                path: self.config_path.clone(),
+                source: e,
+            })?;
 
         // Migrate if needed
         if config.version < CONFIG_VERSION {
@@ -141,9 +141,8 @@ impl ConfigPersistence {
     /// Creates a backup of the current config file
     fn backup_config(&self) -> ConfigResult<()> {
         let backup_path = self.config_path.with_extension("toml.backup");
-        fs::copy(&self.config_path, &backup_path).map_err(|e| ConfigError::BackupError {
-            source: e,
-        })?;
+        fs::copy(&self.config_path, &backup_path)
+            .map_err(|e| ConfigError::BackupError { source: e })?;
         log::debug!("Backed up config to {}", backup_path.display());
         Ok(())
     }
@@ -171,12 +170,12 @@ impl ConfigPersistence {
         temp_file.flush().map_err(ConfigError::IoError)?;
 
         // Atomically rename temp file to target path
-        temp_file.persist(&self.config_path).map_err(|e| {
-            ConfigError::WriteError {
+        temp_file
+            .persist(&self.config_path)
+            .map_err(|e| ConfigError::WriteError {
                 path: self.config_path.clone(),
                 source: e.error,
-            }
-        })?;
+            })?;
 
         Ok(())
     }
@@ -236,7 +235,9 @@ mod tests {
         let persistence = ConfigPersistence::new(config_path.clone());
 
         let config = Config::default();
-        persistence.save(&config).expect("Should create directory and save");
+        persistence
+            .save(&config)
+            .expect("Should create directory and save");
 
         assert!(config_path.exists());
     }
@@ -268,7 +269,10 @@ mod tests {
         let result = persistence.load();
 
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ConfigError::ParseError { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            ConfigError::ParseError { .. }
+        ));
     }
 
     #[test]

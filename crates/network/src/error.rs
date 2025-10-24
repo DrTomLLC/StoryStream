@@ -47,9 +47,7 @@ impl NetworkError {
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            NetworkError::Timeout
-                | NetworkError::NetworkUnavailable
-                | NetworkError::Http(_)
+            NetworkError::Timeout | NetworkError::NetworkUnavailable | NetworkError::Http(_)
         )
     }
 

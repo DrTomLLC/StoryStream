@@ -38,17 +38,24 @@ impl ChangeTracker {
             data,
         );
 
-        let mut changes = self.changes.lock()
+        let mut changes = self
+            .changes
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
-        changes.entry(entity_id).or_insert_with(Vec::new).push(change);
+        changes
+            .entry(entity_id)
+            .or_insert_with(Vec::new)
+            .push(change);
 
         Ok(())
     }
 
     /// Gets all pending changes
     pub fn pending_changes(&self) -> SyncResult<Vec<Change>> {
-        let changes = self.changes.lock()
+        let changes = self
+            .changes
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         let mut all_changes = Vec::new();
@@ -64,7 +71,9 @@ impl ChangeTracker {
 
     /// Gets changes for a specific entity
     pub fn changes_for_entity(&self, entity_id: &str) -> SyncResult<Vec<Change>> {
-        let changes = self.changes.lock()
+        let changes = self
+            .changes
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         Ok(changes.get(entity_id).cloned().unwrap_or_default())
@@ -72,7 +81,9 @@ impl ChangeTracker {
 
     /// Clears all tracked changes
     pub fn clear(&self) -> SyncResult<()> {
-        let mut changes = self.changes.lock()
+        let mut changes = self
+            .changes
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         changes.clear();
@@ -81,7 +92,9 @@ impl ChangeTracker {
 
     /// Removes changes for a specific entity
     pub fn clear_entity(&self, entity_id: &str) -> SyncResult<()> {
-        let mut changes = self.changes.lock()
+        let mut changes = self
+            .changes
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         changes.remove(entity_id);
@@ -90,7 +103,8 @@ impl ChangeTracker {
 
     /// Returns the number of pending changes
     pub fn pending_count(&self) -> usize {
-        self.changes.lock()
+        self.changes
+            .lock()
             .map(|c| c.values().map(|v| v.len()).sum())
             .unwrap_or(0)
     }
@@ -128,19 +142,23 @@ mod tests {
         let device_id = DeviceId::new();
         let tracker = ChangeTracker::new(device_id);
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-1".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-1".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Bookmark,
-            "bookmark-1".to_string(),
-            serde_json::json!({"title": "Important"}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Bookmark,
+                "bookmark-1".to_string(),
+                serde_json::json!({"title": "Important"}),
+            )
+            .unwrap();
 
         let changes = tracker.pending_changes().unwrap();
         assert_eq!(changes.len(), 2);
@@ -151,19 +169,23 @@ mod tests {
         let device_id = DeviceId::new();
         let tracker = ChangeTracker::new(device_id);
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-123".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-123".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-123".to_string(),
-            serde_json::json!({"position": 2000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-123".to_string(),
+                serde_json::json!({"position": 2000}),
+            )
+            .unwrap();
 
         let changes = tracker.changes_for_entity("book-123").unwrap();
         assert_eq!(changes.len(), 2);
@@ -174,12 +196,14 @@ mod tests {
         let device_id = DeviceId::new();
         let tracker = ChangeTracker::new(device_id);
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-123".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-123".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
         assert_eq!(tracker.pending_count(), 1);
 
@@ -192,19 +216,23 @@ mod tests {
         let device_id = DeviceId::new();
         let tracker = ChangeTracker::new(device_id);
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-1".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-1".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
-        tracker.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-2".to_string(),
-            serde_json::json!({"position": 2000}),
-        ).unwrap();
+        tracker
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-2".to_string(),
+                serde_json::json!({"position": 2000}),
+            )
+            .unwrap();
 
         assert_eq!(tracker.pending_count(), 2);
 

@@ -4,7 +4,7 @@
 use crate::state::AppState;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -16,8 +16,8 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::th
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // Search input
-            Constraint::Min(0),     // Results
-            Constraint::Length(3),  // Help
+            Constraint::Min(0),    // Results
+            Constraint::Length(3), // Help
         ])
         .split(area);
 
@@ -27,7 +27,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::th
 }
 
 /// Renders the search input
-fn render_search_input(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::theme::Theme) {
+fn render_search_input(
+    frame: &mut Frame,
+    area: Rect,
+    state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     let input = Paragraph::new(format!("🔍 {}_", state.search_query))
         .block(
             Block::default()
@@ -41,7 +46,12 @@ fn render_search_input(frame: &mut Frame, area: Rect, state: &AppState, theme: &
 }
 
 /// Renders search results
-fn render_search_results(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::theme::Theme) {
+fn render_search_results(
+    frame: &mut Frame,
+    area: Rect,
+    state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     // Demo results based on query
     let all_books = vec![
         ("📖 Moby Dick", "Herman Melville"),

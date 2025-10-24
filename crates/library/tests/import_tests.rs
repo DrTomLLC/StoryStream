@@ -4,20 +4,19 @@
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
-use storystream_library::{BookImporter, ImportOptions, LibraryError};
 use storystream_database::{
     connection::{connect, DatabaseConfig},
     migrations::run_migrations,
     queries::books,
     DbPool,
 };
+use storystream_library::{BookImporter, ImportOptions, LibraryError};
 use tempfile::{NamedTempFile, TempDir};
 
 type Result<T> = std::result::Result<T, LibraryError>;
 
 async fn setup_test_db() -> Result<(DbPool, NamedTempFile)> {
-    let temp_file = NamedTempFile::new()
-        .map_err(LibraryError::Io)?;
+    let temp_file = NamedTempFile::new().map_err(LibraryError::Io)?;
 
     let db_path = temp_file
         .path()
@@ -25,9 +24,7 @@ async fn setup_test_db() -> Result<(DbPool, NamedTempFile)> {
         .ok_or_else(|| LibraryError::InvalidFile("Invalid path".to_string()))?;
 
     let config = DatabaseConfig::new(db_path);
-    let pool = connect(config)
-        .await
-        .map_err(LibraryError::Database)?;
+    let pool = connect(config).await.map_err(LibraryError::Database)?;
 
     run_migrations(&pool)
         .await
@@ -57,7 +54,10 @@ async fn test_import_nonexistent_file_error() -> Result<()> {
     let importer = BookImporter::new(pool);
 
     let result = importer
-        .import_file("/absolutely/nonexistent/path/file.mp3", ImportOptions::default())
+        .import_file(
+            "/absolutely/nonexistent/path/file.mp3",
+            ImportOptions::default(),
+        )
         .await;
 
     assert!(result.is_err());
@@ -76,11 +76,9 @@ async fn test_import_unsupported_file_format() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_file = NamedTempFile::with_suffix(".txt")
-        .map_err(LibraryError::Io)?;
+    let temp_file = NamedTempFile::with_suffix(".txt").map_err(LibraryError::Io)?;
 
-    fs::write(temp_file.path(), b"This is not an audio file")
-        .map_err(LibraryError::Io)?;
+    fs::write(temp_file.path(), b"This is not an audio file").map_err(LibraryError::Io)?;
 
     let result = importer
         .import_file(temp_file.path(), ImportOptions::default())
@@ -102,8 +100,7 @@ async fn test_import_directory_as_file_error() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     let result = importer
         .import_file(temp_dir.path(), ImportOptions::default())
@@ -150,8 +147,7 @@ async fn test_import_multiple_files_with_errors_skip() -> Result<()> {
         PathBuf::from("/fake/path3.mp3"),
     ];
 
-    let options = ImportOptions::new()
-        .with_skip_on_error(true);
+    let options = ImportOptions::new().with_skip_on_error(true);
 
     let result = importer.import_files(&paths, options).await;
 
@@ -173,8 +169,7 @@ async fn test_import_multiple_files_fail_fast() -> Result<()> {
         PathBuf::from("/fake/path2.mp3"),
     ];
 
-    let options = ImportOptions::new()
-        .with_skip_on_error(false);
+    let options = ImportOptions::new().with_skip_on_error(false);
 
     let result = importer.import_files(&paths, options).await;
 
@@ -193,8 +188,7 @@ async fn test_scan_empty_directory() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     // Use reflection to access private scan_directory method via import_directory
     let result = importer
@@ -214,8 +208,7 @@ async fn test_scan_directory_with_mixed_files() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     // Create mix of audio and non-audio files
     // Note: These will fail metadata extraction but test the scanning logic
@@ -227,12 +220,9 @@ async fn test_scan_directory_with_mixed_files() -> Result<()> {
     fs::write(temp_dir.path().join("image.jpg"), b"image data").unwrap();
 
     // Import with skip_on_error since fake files won't have valid metadata
-    let options = ImportOptions::new()
-        .with_skip_on_error(true);
+    let options = ImportOptions::new().with_skip_on_error(true);
 
-    let result = importer
-        .import_directory(temp_dir.path(), options)
-        .await;
+    let result = importer.import_directory(temp_dir.path(), options).await;
 
     // Should succeed (files will fail metadata extraction but be skipped)
     assert!(result.is_ok());
@@ -246,7 +236,10 @@ async fn test_import_directory_nonexistent() -> Result<()> {
     let importer = BookImporter::new(pool);
 
     let result = importer
-        .import_directory("/absolutely/nonexistent/directory", ImportOptions::default())
+        .import_directory(
+            "/absolutely/nonexistent/directory",
+            ImportOptions::default(),
+        )
         .await;
 
     assert!(result.is_err());
@@ -263,8 +256,7 @@ async fn test_import_directory_is_actually_file() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_file = NamedTempFile::new()
-        .map_err(LibraryError::Io)?;
+    let temp_file = NamedTempFile::new().map_err(LibraryError::Io)?;
 
     let result = importer
         .import_directory(temp_file.path(), ImportOptions::default())
@@ -284,8 +276,7 @@ async fn test_scan_directory_with_subdirectories() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     // Create subdirectory structure
     let subdir = temp_dir.path().join("subdir");
@@ -299,12 +290,9 @@ async fn test_scan_directory_with_subdirectories() -> Result<()> {
     create_fake_audio_file(&subdir, "subdir_audio", "m4b");
     create_fake_audio_file(&nested_subdir, "nested_audio", "flac");
 
-    let options = ImportOptions::new()
-        .with_skip_on_error(true);
+    let options = ImportOptions::new().with_skip_on_error(true);
 
-    let result = importer
-        .import_directory(temp_dir.path(), options)
-        .await;
+    let result = importer.import_directory(temp_dir.path(), options).await;
 
     // Should succeed and scan recursively
     assert!(result.is_ok());
@@ -390,15 +378,11 @@ async fn test_import_with_title_override() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_file = NamedTempFile::with_suffix(".txt")
-        .map_err(LibraryError::Io)?;
+    let temp_file = NamedTempFile::with_suffix(".txt").map_err(LibraryError::Io)?;
 
-    let options = ImportOptions::new()
-        .with_title("Override Title");
+    let options = ImportOptions::new().with_title("Override Title");
 
-    let result = importer
-        .import_file(temp_file.path(), options)
-        .await;
+    let result = importer.import_file(temp_file.path(), options).await;
 
     // Will still fail on unsupported format, but tests option flow
     assert!(result.is_err());
@@ -434,19 +418,15 @@ async fn test_scan_directory_ignore_hidden_files() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     // Create visible and hidden audio files
     create_fake_audio_file(temp_dir.path(), "visible", "mp3");
     create_fake_audio_file(temp_dir.path(), ".hidden", "mp3");
 
-    let options = ImportOptions::new()
-        .with_skip_on_error(true);
+    let options = ImportOptions::new().with_skip_on_error(true);
 
-    let result = importer
-        .import_directory(temp_dir.path(), options)
-        .await;
+    let result = importer.import_directory(temp_dir.path(), options).await;
 
     // Should succeed (walkdir includes hidden files by default)
     assert!(result.is_ok());
@@ -459,20 +439,16 @@ async fn test_import_case_insensitive_extensions() -> Result<()> {
     let (pool, _temp) = setup_test_db().await?;
     let importer = BookImporter::new(pool);
 
-    let temp_dir = TempDir::new()
-        .map_err(LibraryError::Io)?;
+    let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
     // Create files with different case extensions
     create_fake_audio_file(temp_dir.path(), "lower", "mp3");
     create_fake_audio_file(temp_dir.path(), "upper", "MP3");
     create_fake_audio_file(temp_dir.path(), "mixed", "Mp3");
 
-    let options = ImportOptions::new()
-        .with_skip_on_error(true);
+    let options = ImportOptions::new().with_skip_on_error(true);
 
-    let result = importer
-        .import_directory(temp_dir.path(), options)
-        .await;
+    let result = importer.import_directory(temp_dir.path(), options).await;
 
     // All should be recognized as audio files
     assert!(result.is_ok());

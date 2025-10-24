@@ -36,7 +36,8 @@ impl ConfigBackupManager {
     pub fn create_backup(&self, config: &Config) -> ConfigResult<PathBuf> {
         self.ensure_backup_dir()?;
 
-        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%3f");        let backup_filename = format!("config_{}.toml", timestamp);
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%3f");
+        let backup_filename = format!("config_{}.toml", timestamp);
         let backup_path = self.backup_dir.join(backup_filename);
 
         let toml_string = toml::to_string_pretty(config)?;
@@ -246,7 +247,9 @@ mod tests {
         let (_temp_dir, manager) = setup_backup_manager();
         let config = Config::default();
 
-        let backup_path = manager.create_backup(&config).expect("Should create backup");
+        let backup_path = manager
+            .create_backup(&config)
+            .expect("Should create backup");
         assert!(backup_path.exists());
     }
 
@@ -256,7 +259,9 @@ mod tests {
         let mut config = Config::default();
         config.player.default_volume = 85;
 
-        let backup_path = manager.create_backup(&config).expect("Should create backup");
+        let backup_path = manager
+            .create_backup(&config)
+            .expect("Should create backup");
 
         let restored = manager
             .restore_from_backup(&backup_path)
@@ -298,9 +303,7 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(100));
         manager.create_backup(&config).expect("Should create");
 
-        let count = manager
-            .delete_all_backups()
-            .expect("Should delete all");
+        let count = manager.delete_all_backups().expect("Should delete all");
         assert_eq!(count, 2);
 
         let backups = manager.list_backups().expect("Should list");

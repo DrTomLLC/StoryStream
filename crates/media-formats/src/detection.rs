@@ -42,7 +42,10 @@ impl FormatDetector {
         }
 
         // Check magic bytes
-        if buffer.starts_with(b"ID3") || buffer[0..2] == [0xFF, 0xFB] || buffer[0..2] == [0xFF, 0xFA] {
+        if buffer.starts_with(b"ID3")
+            || buffer[0..2] == [0xFF, 0xFB]
+            || buffer[0..2] == [0xFF, 0xFA]
+        {
             return Ok(AudioFormat::Mp3);
         }
 
@@ -118,52 +121,52 @@ mod detection_tests {
         assert!(detector.detect_from_file(file.path()).is_ok());
     }
 
-        #[test]
-        fn test_detect_mp3_id3() {
-            let detector = FormatDetector::new();
-            let file = create_temp_file_with_content(b"ID3\x03\x00\x00\x00\x00\x00\x00");
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Ok(AudioFormat::Mp3));
-        }
-
-        #[test]
-        fn test_detect_flac() {
-            let detector = FormatDetector::new();
-            let file = create_temp_file_with_content(b"fLaC\x00\x00\x00\x22");
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Ok(AudioFormat::Flac));
-        }
-
-        #[test]
-        fn test_detect_ogg() {
-            let detector = FormatDetector::new();
-            let file = create_temp_file_with_content(b"OggS\x00\x02\x00\x00");
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Ok(AudioFormat::Opus));
-        }
-
-        #[test]
-        fn test_detect_wav() {
-            let detector = FormatDetector::new();
-            let content = b"RIFF\x00\x00\x00\x00WAVEfmt ";
-            let file = create_temp_file_with_content(content);
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Ok(AudioFormat::Wav));
-        }
-
-        #[test]
-        fn test_detect_invalid_magic_bytes() {
-            let detector = FormatDetector::new();
-            let file = create_temp_file_with_content(b"INVALID\x00\x00\x00");
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Err(FormatError::InvalidMagicBytes));
-        }
-
-        #[test]
-        fn test_detect_too_short() {
-            let detector = FormatDetector::new();
-            let file = create_temp_file_with_content(b"ID");
-            let result = detector.detect_from_magic_bytes(file.path());
-            assert_eq!(result, Err(FormatError::InvalidMagicBytes));
-        }
+    #[test]
+    fn test_detect_mp3_id3() {
+        let detector = FormatDetector::new();
+        let file = create_temp_file_with_content(b"ID3\x03\x00\x00\x00\x00\x00\x00");
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Ok(AudioFormat::Mp3));
     }
+
+    #[test]
+    fn test_detect_flac() {
+        let detector = FormatDetector::new();
+        let file = create_temp_file_with_content(b"fLaC\x00\x00\x00\x22");
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Ok(AudioFormat::Flac));
+    }
+
+    #[test]
+    fn test_detect_ogg() {
+        let detector = FormatDetector::new();
+        let file = create_temp_file_with_content(b"OggS\x00\x02\x00\x00");
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Ok(AudioFormat::Opus));
+    }
+
+    #[test]
+    fn test_detect_wav() {
+        let detector = FormatDetector::new();
+        let content = b"RIFF\x00\x00\x00\x00WAVEfmt ";
+        let file = create_temp_file_with_content(content);
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Ok(AudioFormat::Wav));
+    }
+
+    #[test]
+    fn test_detect_invalid_magic_bytes() {
+        let detector = FormatDetector::new();
+        let file = create_temp_file_with_content(b"INVALID\x00\x00\x00");
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Err(FormatError::InvalidMagicBytes));
+    }
+
+    #[test]
+    fn test_detect_too_short() {
+        let detector = FormatDetector::new();
+        let file = create_temp_file_with_content(b"ID");
+        let result = detector.detect_from_magic_bytes(file.path());
+        assert_eq!(result, Err(FormatError::InvalidMagicBytes));
+    }
+}

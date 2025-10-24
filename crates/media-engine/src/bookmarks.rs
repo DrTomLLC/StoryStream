@@ -172,7 +172,8 @@ impl BookmarkManager {
 
     /// Remove a bookmark by ID
     pub fn remove_bookmark(&mut self, bookmark_id: &str) -> Result<(), String> {
-        let position = self.bookmarks
+        let position = self
+            .bookmarks
             .iter()
             .find(|(_, b)| b.id == bookmark_id)
             .map(|(pos, _)| *pos)
@@ -184,16 +185,12 @@ impl BookmarkManager {
 
     /// Get a bookmark by ID
     pub fn get_bookmark(&self, bookmark_id: &str) -> Option<&Bookmark> {
-        self.bookmarks
-            .values()
-            .find(|b| b.id == bookmark_id)
+        self.bookmarks.values().find(|b| b.id == bookmark_id)
     }
 
     /// Get a mutable bookmark by ID
     pub fn get_bookmark_mut(&mut self, bookmark_id: &str) -> Option<&mut Bookmark> {
-        self.bookmarks
-            .values_mut()
-            .find(|b| b.id == bookmark_id)
+        self.bookmarks.values_mut().find(|b| b.id == bookmark_id)
     }
 
     /// Get all bookmarks
@@ -212,7 +209,10 @@ impl BookmarkManager {
     /// Get the next bookmark after a position
     pub fn get_next_bookmark(&self, position: Duration) -> Option<&Bookmark> {
         self.bookmarks
-            .range((std::ops::Bound::Excluded(position), std::ops::Bound::Unbounded))
+            .range((
+                std::ops::Bound::Excluded(position),
+                std::ops::Bound::Unbounded,
+            ))
             .next()
             .map(|(_, bookmark)| bookmark)
     }
@@ -271,14 +271,14 @@ impl BookmarkManager {
 
     /// Create an auto-bookmark at position
     pub fn create_auto_bookmark(&mut self, position: Duration) -> Result<String, String> {
-        let bookmark = Bookmark::new(position, BookmarkType::Auto)
-            .with_title("Auto-bookmark");
+        let bookmark = Bookmark::new(position, BookmarkType::Auto).with_title("Auto-bookmark");
         self.add_bookmark(bookmark)
     }
 
     /// Clean up old auto-bookmarks to maintain the limit
     fn cleanup_old_auto_bookmarks(&mut self) {
-        let auto_bookmarks: Vec<_> = self.bookmarks
+        let auto_bookmarks: Vec<_> = self
+            .bookmarks
             .iter()
             .filter(|(_, b)| b.bookmark_type == BookmarkType::Auto)
             .map(|(pos, b)| (*pos, b.created_at))
@@ -304,7 +304,8 @@ impl BookmarkManager {
 
     /// Clear bookmarks of a specific type
     pub fn clear_by_type(&mut self, bookmark_type: BookmarkType) {
-        self.bookmarks.retain(|_, b| b.bookmark_type != bookmark_type);
+        self.bookmarks
+            .retain(|_, b| b.bookmark_type != bookmark_type);
     }
 
     /// Get bookmark count
@@ -325,8 +326,8 @@ impl BookmarkManager {
 
     /// Import bookmarks from JSON
     pub fn import_json(&mut self, json: &str) -> Result<usize, String> {
-        let bookmarks: Vec<Bookmark> = serde_json::from_str(json)
-            .map_err(|e| format!("Failed to parse bookmarks: {}", e))?;
+        let bookmarks: Vec<Bookmark> =
+            serde_json::from_str(json).map_err(|e| format!("Failed to parse bookmarks: {}", e))?;
 
         let count = bookmarks.len();
         for bookmark in bookmarks {
@@ -337,7 +338,12 @@ impl BookmarkManager {
     }
 
     /// Set auto-bookmark settings
-    pub fn configure_auto_bookmarks(&mut self, enabled: bool, interval_secs: u64, max_count: usize) {
+    pub fn configure_auto_bookmarks(
+        &mut self,
+        enabled: bool,
+        interval_secs: u64,
+        max_count: usize,
+    ) {
         self.auto_bookmark_enabled = enabled;
         self.auto_bookmark_interval = Duration::from_secs(interval_secs);
         self.max_auto_bookmarks = max_count;
@@ -411,9 +417,15 @@ mod tests {
     fn test_bookmark_manager_navigation() {
         let mut manager = BookmarkManager::new();
 
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::User)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(300), BookmarkType::User)).unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::User))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(300), BookmarkType::User))
+            .unwrap();
 
         let next = manager.get_next_bookmark(Duration::from_secs(150));
         assert!(next.is_some());
@@ -445,7 +457,9 @@ mod tests {
         manager.configure_auto_bookmarks(true, 60, 3); // Max 3 auto-bookmarks
 
         for i in 0..5 {
-            manager.create_auto_bookmark(Duration::from_secs(i * 60)).unwrap();
+            manager
+                .create_auto_bookmark(Duration::from_secs(i * 60))
+                .unwrap();
         }
 
         let auto_bookmarks = manager.get_bookmarks_by_type(BookmarkType::Auto);
@@ -456,25 +470,56 @@ mod tests {
     fn test_bookmark_types() {
         let mut manager = BookmarkManager::new();
 
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::Auto)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(300), BookmarkType::Chapter)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(400), BookmarkType::Favorite)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(500), BookmarkType::User)).unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::Auto))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(
+                Duration::from_secs(300),
+                BookmarkType::Chapter,
+            ))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(
+                Duration::from_secs(400),
+                BookmarkType::Favorite,
+            ))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(500), BookmarkType::User))
+            .unwrap();
 
         assert_eq!(manager.get_bookmarks_by_type(BookmarkType::User).len(), 2);
         assert_eq!(manager.get_bookmarks_by_type(BookmarkType::Auto).len(), 1);
-        assert_eq!(manager.get_bookmarks_by_type(BookmarkType::Chapter).len(), 1);
-        assert_eq!(manager.get_bookmarks_by_type(BookmarkType::Favorite).len(), 1);
+        assert_eq!(
+            manager.get_bookmarks_by_type(BookmarkType::Chapter).len(),
+            1
+        );
+        assert_eq!(
+            manager.get_bookmarks_by_type(BookmarkType::Favorite).len(),
+            1
+        );
     }
 
     #[test]
     fn test_clear_bookmarks() {
         let mut manager = BookmarkManager::new();
 
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::Auto)).unwrap();
-        manager.add_bookmark(Bookmark::new(Duration::from_secs(300), BookmarkType::Favorite)).unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(100), BookmarkType::User))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(Duration::from_secs(200), BookmarkType::Auto))
+            .unwrap();
+        manager
+            .add_bookmark(Bookmark::new(
+                Duration::from_secs(300),
+                BookmarkType::Favorite,
+            ))
+            .unwrap();
 
         manager.clear_by_type(BookmarkType::Auto);
         assert_eq!(manager.count(), 2);
@@ -487,10 +532,12 @@ mod tests {
     fn test_export_import() {
         let mut manager = BookmarkManager::new();
 
-        manager.add_bookmark(
-            Bookmark::new(Duration::from_secs(100), BookmarkType::User)
-                .with_title("Test Bookmark")
-        ).unwrap();
+        manager
+            .add_bookmark(
+                Bookmark::new(Duration::from_secs(100), BookmarkType::User)
+                    .with_title("Test Bookmark"),
+            )
+            .unwrap();
 
         let json = manager.export_json().unwrap();
         assert!(json.contains("Test Bookmark"));

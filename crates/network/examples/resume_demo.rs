@@ -6,8 +6,8 @@
 //! - Resuming interrupted downloads
 //! - Cleanup of old resume data
 
-use storystream_network::{can_resume, ResumeInfo, ResumeManager};
 use std::time::Duration;
+use storystream_network::{can_resume, ResumeInfo, ResumeManager};
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
@@ -44,13 +44,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_total_size(10_000_000); // 10MB total
 
     // Save resume info
-    manager
-        .save("large_download", &resume_info)
-        .await?;
+    manager.save("large_download", &resume_info).await?;
 
     println!("  ✓ Saved resume information");
     println!("    - Downloaded: {} bytes", resume_info.bytes_downloaded);
-    println!("    - Total size: {} bytes", resume_info.total_size.unwrap());
+    println!(
+        "    - Total size: {} bytes",
+        resume_info.total_size.unwrap()
+    );
     println!(
         "    - Progress: {:.1}%",
         resume_info.progress_percentage().unwrap()
@@ -81,7 +82,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(loaded) = manager.load("large_download").await? {
         println!("  ✓ Loaded resume data:");
         println!("    - Bytes downloaded: {}", loaded.bytes_downloaded);
-        println!("    - Progress: {:.1}%", loaded.progress_percentage().unwrap());
+        println!(
+            "    - Progress: {:.1}%",
+            loaded.progress_percentage().unwrap()
+        );
         println!("    - Interrupted at: {}", loaded.interrupted_at);
         println!("    - Is complete: {}", loaded.is_complete());
     }
@@ -91,10 +95,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create several resume infos
     for i in 1..=5 {
         let info = ResumeInfo::new(i * 1_000_000).with_total_size(10_000_000);
-        manager
-            .save(&format!("download_{}", i), &info)
-            .await?;
-        println!("  ✓ Saved download_{} ({:.1}%)", i, info.progress_percentage().unwrap());
+        manager.save(&format!("download_{}", i), &info).await?;
+        println!(
+            "  ✓ Saved download_{} ({:.1}%)",
+            i,
+            info.progress_percentage().unwrap()
+        );
     }
 
     println!("\n5️⃣ Listing incomplete downloads...\n");

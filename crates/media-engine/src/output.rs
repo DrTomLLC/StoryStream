@@ -1,13 +1,13 @@
 // crates/media-engine/src/output.rs
 // Enhanced audio output with device selection
 
-use crate::audio_device::{AudioDeviceManager, AudioDeviceInfo};
+use crate::audio_device::{AudioDeviceInfo, AudioDeviceManager};
 use crate::error::{EngineError, EngineResult};
 use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::{Device, SampleRate, Stream, StreamConfig};
 use crossbeam_channel::{Receiver, TryRecvError};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// Audio output configuration
 #[derive(Debug, Clone)]
@@ -52,26 +52,40 @@ impl AudioOutput {
         }
 
         let device = manager.get_output_device()?;
-        let device_info = manager.get_selected_device()
+        let device_info = manager
+            .get_selected_device()
             .ok_or_else(|| EngineError::OutputError("No device selected".to_string()))?
             .clone();
 
         // Validate configuration against device capabilities
-        if config.channels < device_info.min_channels || config.channels > device_info.max_channels {
+        if config.channels < device_info.min_channels || config.channels > device_info.max_channels
+        {
             return Err(EngineError::OutputError(format!(
                 "Device {} supports {}-{} channels, requested {}",
-                device_info.name, device_info.min_channels, device_info.max_channels, config.channels
+                device_info.name,
+                device_info.min_channels,
+                device_info.max_channels,
+                config.channels
             )));
         }
 
-        if !device_info.sample_rates.is_empty() && !device_info.sample_rates.contains(&config.sample_rate) {
-            log::warn!("Sample rate {} may not be optimal for device {}", config.sample_rate, device_info.name);
+        if !device_info.sample_rates.is_empty()
+            && !device_info.sample_rates.contains(&config.sample_rate)
+        {
+            log::warn!(
+                "Sample rate {} may not be optimal for device {}",
+                config.sample_rate,
+                device_info.name
+            );
         }
 
         let stream_config = StreamConfig {
             channels: config.channels,
             sample_rate: SampleRate(config.sample_rate),
-            buffer_size: config.buffer_size.map(|s| cpal::BufferSize::Fixed(s)).unwrap_or(cpal::BufferSize::Default),
+            buffer_size: config
+                .buffer_size
+                .map(|s| cpal::BufferSize::Fixed(s))
+                .unwrap_or(cpal::BufferSize::Default),
         };
 
         Ok(Self {
@@ -123,7 +137,8 @@ impl AudioOutput {
 
         let device_name = self.device_info.name.clone();
 
-        let stream = self.device
+        let stream = self
+            .device
             .build_output_stream(
                 &self.config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
@@ -161,18 +176,25 @@ impl AudioOutput {
             )
             .map_err(|e| EngineError::OutputError(format!("Failed to build stream: {}", e)))?;
 
-        stream.play()
+        stream
+            .play()
             .map_err(|e| EngineError::OutputError(format!("Failed to start stream: {}", e)))?;
 
         self.stream = Some(stream);
-        log::info!("Audio playback started on device: {}", self.device_info.name);
+        log::info!(
+            "Audio playback started on device: {}",
+            self.device_info.name
+        );
         Ok(())
     }
 
     /// Stop playing audio
     pub fn stop(&mut self) {
         if self.stream.take().is_some() {
-            log::info!("Audio playback stopped on device: {}", self.device_info.name);
+            log::info!(
+                "Audio playback stopped on device: {}",
+                self.device_info.name
+            );
         }
     }
 

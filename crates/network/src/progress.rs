@@ -109,7 +109,11 @@ impl ProgressTracker {
 
     /// Checks if download is complete
     pub fn is_complete(&self) -> bool {
-        self.inner.lock().ok().map(|p| p.is_complete()).unwrap_or(false)
+        self.inner
+            .lock()
+            .ok()
+            .map(|p| p.is_complete())
+            .unwrap_or(false)
     }
 }
 

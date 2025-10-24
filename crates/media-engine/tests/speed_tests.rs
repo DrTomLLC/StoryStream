@@ -32,7 +32,9 @@ fn test_speed_accuracy() {
     processor.set_pitch_correction(false).unwrap();
 
     let input_len = 1000;
-    let input: Vec<f32> = (0..input_len).map(|i| (i as f32 / input_len as f32) * 0.5).collect();
+    let input: Vec<f32> = (0..input_len)
+        .map(|i| (i as f32 / input_len as f32) * 0.5)
+        .collect();
 
     let output = processor.process(&input).unwrap();
     let expected_len = (input_len as f32 / 1.5) as usize;

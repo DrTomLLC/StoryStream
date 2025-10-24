@@ -1,11 +1,11 @@
 // crates/resilience/tests/resilience_tests.rs
 //! Integration tests for resilience patterns
 
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use storystream_resilience::{
     with_retry, CircuitBreaker, CircuitBreakerConfig, RateLimiter, RetryPolicy, Timeout,
 };
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 #[test]
 fn test_retry_with_circuit_breaker() {
@@ -54,7 +54,10 @@ fn test_rate_limiter_with_timeout() {
 
     // But the limiter should reject
     if let Ok(inner_result) = result {
-        assert!(inner_result.is_err(), "Rate limiter should reject 6th request");
+        assert!(
+            inner_result.is_err(),
+            "Rate limiter should reject 6th request"
+        );
     }
 }
 
@@ -95,7 +98,8 @@ fn test_combined_resilience_patterns() {
 
 #[test]
 fn test_resilience_under_load() {
-    let circuit_breaker = CircuitBreaker::new(CircuitBreakerConfig::new(10, Duration::from_millis(100)));
+    let circuit_breaker =
+        CircuitBreaker::new(CircuitBreakerConfig::new(10, Duration::from_millis(100)));
     let rate_limiter = RateLimiter::new(20, Duration::from_secs(1));
 
     let mut successes = 0;

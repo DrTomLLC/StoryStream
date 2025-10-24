@@ -3,7 +3,9 @@
 
 use anyhow::{anyhow, Result};
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind},
+    event::{
+        DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers, MouseEventKind,
+    },
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -90,9 +92,8 @@ impl IntegratedApp {
             self.sync_playback_state()?;
 
             // Render
-            terminal.draw(|frame| {
-                storystream_tui::ui::render(frame, &self.tui_state, &self.theme)
-            })?;
+            terminal
+                .draw(|frame| storystream_tui::ui::render(frame, &self.tui_state, &self.theme))?;
 
             if self.tui_state.should_quit {
                 break;
@@ -104,7 +105,7 @@ impl IntegratedApp {
                     Event::Key(key) => {
                         if key.code == KeyCode::Char('q')
                             || (key.code == KeyCode::Char('c')
-                            && key.modifiers.contains(KeyModifiers::CONTROL))
+                                && key.modifiers.contains(KeyModifiers::CONTROL))
                         {
                             self.tui_state.quit();
                             continue;

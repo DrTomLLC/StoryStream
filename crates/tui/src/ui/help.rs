@@ -75,39 +75,38 @@ pub fn render(frame: &mut Frame, area: Rect, _state: &AppState, theme: &crate::t
 fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
     let help_content = vec![
         // Header
-        Line::from(vec![
-            Span::styled(
-                "═══════════════════════════════════════════════════════════════",
-                theme.accent_style(),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "        ♪ STORYSTREAM COMPLETE USER GUIDE ♪",
-                theme.highlight_style(),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "═══════════════════════════════════════════════════════════════",
-                theme.accent_style(),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "═══════════════════════════════════════════════════════════════",
+            theme.accent_style(),
+        )]),
+        Line::from(vec![Span::styled(
+            "        ♪ STORYSTREAM COMPLETE USER GUIDE ♪",
+            theme.highlight_style(),
+        )]),
+        Line::from(vec![Span::styled(
+            "═══════════════════════════════════════════════════════════════",
+            theme.accent_style(),
+        )]),
         Line::from(""),
-
         // GENERAL
         section_header("1. GENERAL NAVIGATION", theme),
         Line::from(""),
         help_item("q / Ctrl+C", "Quit application", theme),
-        help_item("Tab", "Switch between views (Library → Player → Bookmarks → ...)", theme),
+        help_item(
+            "Tab",
+            "Switch between views (Library → Player → Bookmarks → ...)",
+            theme,
+        ),
         help_item("Shift+Tab", "Switch views in reverse", theme),
         help_item("h", "Show/hide this help screen", theme),
         help_item("t", "Cycle through color themes", theme),
         help_item("Esc", "Cancel current operation or go back", theme),
         Line::from(""),
-        example_box("Example: Press Tab repeatedly to cycle through all views", theme),
+        example_box(
+            "Example: Press Tab repeatedly to cycle through all views",
+            theme,
+        ),
         Line::from(""),
-
         // LIBRARY
         section_header("2. LIBRARY VIEW 📚", theme),
         Line::from(""),
@@ -122,7 +121,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
         Line::from(""),
         example_box("Example: Use ↑/↓ to browse, Enter to start playing", theme),
         Line::from(""),
-
         // PLAYER
         section_header("3. PLAYER CONTROLS ▶️", theme),
         Line::from(""),
@@ -164,7 +162,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             theme,
         ),
         Line::from(""),
-
         // BOOKMARKS
         section_header("4. BOOKMARKS 🔖", theme),
         Line::from(""),
@@ -181,7 +178,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             theme,
         ),
         Line::from(""),
-
         // SEARCH
         section_header("5. SEARCH 🔍", theme),
         Line::from(""),
@@ -209,7 +205,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             Span::styled(" - Search in genres", theme.text_style()),
         ]),
         Line::from(""),
-
         // PLAYLISTS
         section_header("6. PLAYLISTS 📋", theme),
         Line::from(""),
@@ -227,7 +222,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             theme,
         ),
         Line::from(""),
-
         // STATISTICS
         section_header("7. STATISTICS 📊", theme),
         Line::from(""),
@@ -253,7 +247,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             Span::raw("Completion rates and favorites"),
         ]),
         Line::from(""),
-
         // SETTINGS
         section_header("8. SETTINGS ⚙️", theme),
         Line::from(""),
@@ -286,7 +279,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             Span::raw("Theme and appearance"),
         ]),
         Line::from(""),
-
         // MOUSE CONTROLS
         section_header("9. MOUSE CONTROLS 🖱️", theme),
         Line::from(""),
@@ -298,9 +290,11 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
         help_item("Click progress bar", "Seek to position", theme),
         help_item("Drag progress bar", "Scrub through audio", theme),
         Line::from(""),
-        example_box("Example: Click on a book in the library to select it", theme),
+        example_box(
+            "Example: Click on a book in the library to select it",
+            theme,
+        ),
         Line::from(""),
-
         // THEMES
         section_header("10. COLOR THEMES 🎨", theme),
         Line::from(""),
@@ -343,41 +337,44 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             Span::raw(" - Sublime Text classic"),
         ]),
         Line::from(""),
-
         // TIPS AND TRICKS
         section_header("11. TIPS & TRICKS 💡", theme),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Speed Listening:", theme.text_secondary_style().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Speed Listening:",
+            theme.text_secondary_style().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  Increase speed gradually to 1.5x-2.0x for efficient listening"),
         Line::from("  Perfect for catching up on backlogs!"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Bookmarking Strategy:", theme.text_secondary_style().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Bookmarking Strategy:",
+            theme.text_secondary_style().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  Press 'b' whenever you hear something interesting"),
         Line::from("  Use Shift+B to add detailed notes"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Smart Playlists:", theme.text_secondary_style().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Smart Playlists:",
+            theme.text_secondary_style().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  Create mood-based playlists (Relaxing, Exciting, etc.)"),
         Line::from("  Use 'Recently Played' to resume your listening journey"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Sync Across Devices:", theme.text_secondary_style().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Sync Across Devices:",
+            theme.text_secondary_style().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  Enable auto-sync in Settings"),
         Line::from("  Start on laptop, continue on phone seamlessly"),
         Line::from(""),
-        Line::from(vec![
-            Span::styled("Night Listening:", theme.text_secondary_style().add_modifier(Modifier::BOLD)),
-        ]),
+        Line::from(vec![Span::styled(
+            "Night Listening:",
+            theme.text_secondary_style().add_modifier(Modifier::BOLD),
+        )]),
         Line::from("  Switch to a dark theme (press 't')"),
         Line::from("  Reduce volume gradually as you fall asleep"),
         Line::from(""),
-
         // EXAMPLES
         section_header("12. COMPLETE WORKFLOW EXAMPLES 📖", theme),
         Line::from(""),
@@ -479,7 +476,6 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             Span::raw("Settings are automatically saved"),
         ]),
         Line::from(""),
-
         // TROUBLESHOOTING
         section_header("13. TROUBLESHOOTING 🔧", theme),
         Line::from(""),
@@ -497,27 +493,20 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
         Line::from("  → Verify volume isn't muted (press '+' to increase)"),
         Line::from("  → Check system audio settings"),
         Line::from(""),
-
         // FOOTER
         Line::from(""),
-        Line::from(vec![
-            Span::styled(
-                "═══════════════════════════════════════════════════════════════",
-                theme.accent_style(),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "       Press 'h' or Esc to close help · Press Tab to navigate",
-                theme.text_secondary_style(),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled(
-                "═══════════════════════════════════════════════════════════════",
-                theme.accent_style(),
-            ),
-        ]),
+        Line::from(vec![Span::styled(
+            "═══════════════════════════════════════════════════════════════",
+            theme.accent_style(),
+        )]),
+        Line::from(vec![Span::styled(
+            "       Press 'h' or Esc to close help · Press Tab to navigate",
+            theme.text_secondary_style(),
+        )]),
+        Line::from(vec![Span::styled(
+            "═══════════════════════════════════════════════════════════════",
+            theme.accent_style(),
+        )]),
     ];
 
     let help = List::new(
@@ -526,12 +515,12 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
             .map(|line| ListItem::new(line))
             .collect::<Vec<_>>(),
     )
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border_color()))
-                .title("❓ Complete User Guide (Scroll with ↑/↓ or Mouse Wheel)"),
-        );
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border_color()))
+            .title("❓ Complete User Guide (Scroll with ↑/↓ or Mouse Wheel)"),
+    );
 
     frame.render_widget(help, area);
 }
@@ -539,7 +528,9 @@ fn render_all_help(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) {
 fn section_header<'a>(text: &'a str, theme: &crate::theme::Theme) -> Line<'a> {
     Line::from(vec![Span::styled(
         text,
-        theme.accent_style().add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+        theme
+            .accent_style()
+            .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
     )])
 }
 
@@ -553,10 +544,7 @@ fn subsection<'a>(text: &'a str, theme: &crate::theme::Theme) -> Line<'a> {
 fn help_item<'a>(key: &'a str, description: &'a str, theme: &crate::theme::Theme) -> Line<'a> {
     Line::from(vec![
         Span::styled("  ", Style::default()),
-        Span::styled(
-            format!("{:20}", key),
-            theme.highlight_style(),
-        ),
+        Span::styled(format!("{:20}", key), theme.highlight_style()),
         Span::styled(" → ", theme.text_secondary_style()),
         Span::styled(description, theme.text_style()),
     ])
@@ -565,7 +553,10 @@ fn help_item<'a>(key: &'a str, description: &'a str, theme: &crate::theme::Theme
 fn example_box<'a>(text: &'a str, theme: &crate::theme::Theme) -> Line<'a> {
     Line::from(vec![
         Span::styled("  💡 ", theme.warning_style()),
-        Span::styled(text, theme.text_secondary_style().add_modifier(Modifier::ITALIC)),
+        Span::styled(
+            text,
+            theme.text_secondary_style().add_modifier(Modifier::ITALIC),
+        ),
     ])
 }
 

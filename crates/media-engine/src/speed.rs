@@ -13,10 +13,7 @@ impl Speed {
     pub fn new(value: f32) -> Result<Self, String> {
         // Check for NaN and infinity
         if !value.is_finite() {
-            return Err(format!(
-                "Speed must be a finite number, got {}",
-                value
-            ));
+            return Err(format!("Speed must be a finite number, got {}", value));
         }
 
         if value < Self::MIN || value > Self::MAX {
@@ -207,7 +204,8 @@ impl SpeedProcessor {
             output_channel.resize(output_frames, 0.0);
 
             // Normalize to prevent clipping from overlap-add
-            let max_val = output_channel.iter()
+            let max_val = output_channel
+                .iter()
                 .map(|&x| x.abs())
                 .fold(0.0f32, f32::max);
 
@@ -408,7 +406,8 @@ mod integration_tests {
 
         // Generate test audio
         let mut input = Vec::new();
-        for i in 0..8820 { // 0.1 seconds stereo at 44.1kHz
+        for i in 0..8820 {
+            // 0.1 seconds stereo at 44.1kHz
             let t = (i / 2) as f32 / 44100.0;
             let sample = (2.0 * std::f32::consts::PI * 440.0 * t).sin() * 0.3;
             input.push(sample);
@@ -442,7 +441,8 @@ mod integration_tests {
 
         // Create stereo test signal with different content per channel
         let mut input = Vec::new();
-        for i in 0..4410 { // 0.05 seconds
+        for i in 0..4410 {
+            // 0.05 seconds
             let t = (i / 2) as f32 / 44100.0;
             let left = (2.0 * std::f32::consts::PI * 440.0 * t).sin() * 0.3;
             let right = (2.0 * std::f32::consts::PI * 880.0 * t).sin() * 0.3;
@@ -461,7 +461,10 @@ mod integration_tests {
         let right_samples: Vec<f32> = output.iter().skip(1).step_by(2).copied().collect();
 
         let left_max = left_samples.iter().map(|&s| s.abs()).fold(0.0f32, f32::max);
-        let right_max = right_samples.iter().map(|&s| s.abs()).fold(0.0f32, f32::max);
+        let right_max = right_samples
+            .iter()
+            .map(|&s| s.abs())
+            .fold(0.0f32, f32::max);
 
         assert!(left_max > 0.01, "Left channel should have content");
         assert!(right_max > 0.01, "Right channel should have content");

@@ -68,14 +68,13 @@ impl Feed {
 
     /// Sorts items by publication date (newest first)
     pub fn sort_by_date(&mut self) {
-        self.items.sort_by(|a, b| {
-            match (&b.published, &a.published) {
+        self.items
+            .sort_by(|a, b| match (&b.published, &a.published) {
                 (Some(b_date), Some(a_date)) => b_date.cmp(a_date),
                 (Some(_), None) => std::cmp::Ordering::Less,
                 (None, Some(_)) => std::cmp::Ordering::Greater,
                 (None, None) => std::cmp::Ordering::Equal,
-            }
-        });
+            });
     }
 
     /// Filters items to only those with audio enclosures

@@ -48,14 +48,20 @@ fn test_device_properties() {
 
         // Channel range should be valid
         assert!(device.min_channels > 0, "Min channels should be > 0");
-        assert!(device.max_channels >= device.min_channels,
-                "Max channels should be >= min channels");
+        assert!(
+            device.max_channels >= device.min_channels,
+            "Max channels should be >= min channels"
+        );
 
         // Default channels should be within range
-        assert!(device.default_channels >= device.min_channels,
-                "Default channels should be >= min");
-        assert!(device.default_channels <= device.max_channels,
-                "Default channels should be <= max");
+        assert!(
+            device.default_channels >= device.min_channels,
+            "Default channels should be >= min"
+        );
+        assert!(
+            device.default_channels <= device.max_channels,
+            "Default channels should be <= max"
+        );
 
         // Should support at least one sample rate
         if !device.sample_rates.is_empty() {
@@ -67,8 +73,10 @@ fn test_device_properties() {
             }
 
             // Default sample rate should be in the list
-            assert!(device.sample_rates.contains(&device.default_sample_rate),
-                    "Default sample rate should be supported");
+            assert!(
+                device.sample_rates.contains(&device.default_sample_rate),
+                "Default sample rate should be supported"
+            );
         }
     }
 }
@@ -136,12 +144,16 @@ fn test_device_availability() {
     let devices = manager.list_devices();
 
     if let Some(device) = devices.first() {
-        assert!(manager.is_device_available(&device.id),
-                "Device should be available");
+        assert!(
+            manager.is_device_available(&device.id),
+            "Device should be available"
+        );
     }
 
-    assert!(!manager.is_device_available("invalid-id"),
-            "Invalid device should not be available");
+    assert!(
+        !manager.is_device_available("invalid-id"),
+        "Invalid device should not be available"
+    );
 }
 
 #[test]
@@ -163,9 +175,10 @@ fn test_recommended_settings() {
         assert!(channels > 0, "Channels should be > 0");
 
         // Common sample rates
-        assert!([8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 192000]
-                    .contains(&sample_rate),
-                "Sample rate should be a common value");
+        assert!(
+            [8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 192000].contains(&sample_rate),
+            "Sample rate should be a common value"
+        );
     }
 }
 
@@ -179,12 +192,16 @@ fn test_device_refresh() {
     let initial_count = manager.list_devices().len();
 
     // Refresh should succeed
-    assert!(manager.refresh_devices().is_ok(),
-            "Device refresh should succeed");
+    assert!(
+        manager.refresh_devices().is_ok(),
+        "Device refresh should succeed"
+    );
 
     let after_count = manager.list_devices().len();
-    assert_eq!(initial_count, after_count,
-               "Device count should be consistent");
+    assert_eq!(
+        initial_count, after_count,
+        "Device count should be consistent"
+    );
 }
 
 #[test]
@@ -193,8 +210,11 @@ fn test_audio_output_creation() {
     assert!(result.is_ok(), "Should create audio output");
 
     if let Ok(output) = result {
-        assert_eq!(output.device_info().default_channels, 2,
-                   "Should use specified channels");
+        assert_eq!(
+            output.device_info().default_channels,
+            2,
+            "Should use specified channels"
+        );
     }
 }
 
@@ -240,8 +260,10 @@ fn test_audio_output_device_list() {
     let devices = output.list_devices();
 
     assert!(!devices.is_empty(), "Should list devices");
-    assert!(devices.iter().any(|d| d.is_default),
-            "Should include default device");
+    assert!(
+        devices.iter().any(|d| d.is_default),
+        "Should include default device"
+    );
 }
 
 #[test]
@@ -252,8 +274,10 @@ fn test_audio_output_device_availability() {
     };
 
     // Current device should be available
-    assert!(output.is_device_available(),
-            "Current device should be available");
+    assert!(
+        output.is_device_available(),
+        "Current device should be available"
+    );
 }
 
 #[test]
@@ -268,8 +292,7 @@ fn test_device_id_uniqueness() {
     // Collect all IDs
     let mut ids = std::collections::HashSet::new();
     for device in &devices {
-        assert!(ids.insert(device.id.clone()),
-                "Device IDs should be unique");
+        assert!(ids.insert(device.id.clone()), "Device IDs should be unique");
     }
 }
 
@@ -284,15 +307,16 @@ fn test_device_sorting() {
 
     if devices.len() > 1 {
         // First device should be default
-        assert!(devices[0].is_default,
-                "First device should be the default");
+        assert!(devices[0].is_default, "First device should be the default");
 
         // Rest should be alphabetically sorted (after default)
         for i in 1..devices.len() {
             if !devices[i].is_default && i > 0 {
-                if !devices[i-1].is_default {
-                    assert!(devices[i].name >= devices[i-1].name,
-                            "Non-default devices should be alphabetically sorted");
+                if !devices[i - 1].is_default {
+                    assert!(
+                        devices[i].name >= devices[i - 1].name,
+                        "Non-default devices should be alphabetically sorted"
+                    );
                 }
             }
         }
@@ -341,10 +365,19 @@ fn test_manager_multiple_selections() {
 #[test]
 fn test_output_config_default() {
     let config = AudioOutputConfig::default();
-    assert_eq!(config.sample_rate, 48000, "Default sample rate should be 48kHz");
+    assert_eq!(
+        config.sample_rate, 48000,
+        "Default sample rate should be 48kHz"
+    );
     assert_eq!(config.channels, 2, "Default channels should be 2");
-    assert!(config.device_id.is_none(), "Default device ID should be None");
-    assert!(config.buffer_size.is_none(), "Default buffer size should be None");
+    assert!(
+        config.device_id.is_none(),
+        "Default device ID should be None"
+    );
+    assert!(
+        config.buffer_size.is_none(),
+        "Default buffer size should be None"
+    );
 }
 
 #[test]
@@ -353,16 +386,15 @@ fn test_concurrent_manager_creation() {
 
     let handles: Vec<_> = (0..4)
         .map(|_| {
-            thread::spawn(|| {
-                match AudioDeviceManager::new() {
-                    Ok(manager) => Some(manager.list_devices().len()),
-                    Err(_) => None,
-                }
+            thread::spawn(|| match AudioDeviceManager::new() {
+                Ok(manager) => Some(manager.list_devices().len()),
+                Err(_) => None,
             })
         })
         .collect();
 
-    let results: Vec<_> = handles.into_iter()
+    let results: Vec<_> = handles
+        .into_iter()
         .filter_map(|h| match h.join() {
             Ok(result) => result,
             Err(_) => None,
@@ -371,8 +403,10 @@ fn test_concurrent_manager_creation() {
 
     // All threads should get the same number of devices
     if results.len() > 1 {
-        assert!(results.windows(2).all(|w| w[0] == w[1]),
-                "All threads should see same devices");
+        assert!(
+            results.windows(2).all(|w| w[0] == w[1]),
+            "All threads should see same devices"
+        );
     }
 }
 
@@ -386,12 +420,15 @@ fn test_device_capabilities_stereo() {
     let devices = manager.list_devices();
 
     // Most audio devices should support stereo
-    let stereo_devices = devices.iter()
+    let stereo_devices = devices
+        .iter()
         .filter(|d| d.min_channels <= 2 && d.max_channels >= 2)
         .count();
 
-    assert!(stereo_devices > 0,
-            "At least one device should support stereo");
+    assert!(
+        stereo_devices > 0,
+        "At least one device should support stereo"
+    );
 }
 
 #[test]
@@ -406,12 +443,16 @@ fn test_common_sample_rates_supported() {
     // At least one device should support common sample rates
     let common_rates = [44100, 48000];
     let has_common_rate = devices.iter().any(|device| {
-        device.sample_rates.iter()
+        device
+            .sample_rates
+            .iter()
             .any(|&rate| common_rates.contains(&rate))
     });
 
-    assert!(has_common_rate,
-            "At least one device should support 44.1 or 48 kHz");
+    assert!(
+        has_common_rate,
+        "At least one device should support 44.1 or 48 kHz"
+    );
 }
 
 #[test]

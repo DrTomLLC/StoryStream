@@ -48,11 +48,19 @@ impl MetadataExtractor {
         let metadata = std::fs::metadata(path).context("Failed to read file metadata")?;
         let file_size = metadata.len();
 
-        let format = self.detector.detect_from_file(path).context("Failed to detect audio format")?;
+        let format = self
+            .detector
+            .detect_from_file(path)
+            .context("Failed to detect audio format")?;
 
-        let properties = self.analyzer.analyze(path).context("Failed to analyze audio properties")?;
+        let properties = self
+            .analyzer
+            .analyze(path)
+            .context("Failed to analyze audio properties")?;
 
-        let duration = properties.duration.ok_or_else(|| anyhow::anyhow!("Could not determine audio duration"))?;
+        let duration = properties
+            .duration
+            .ok_or_else(|| anyhow::anyhow!("Could not determine audio duration"))?;
 
         // Convert std::time::Duration to our Duration
         let duration = Duration::from_seconds(duration.as_secs());
@@ -110,19 +118,26 @@ impl MetadataExtractor {
         let author = tag.artist().map(|s| s.to_string());
         let description = tag.comment().map(|s| s.to_string());
 
-        let narrator = tag.get_string(&ItemKey::Composer)
+        let narrator = tag
+            .get_string(&ItemKey::Composer)
             .or_else(|| tag.get_string(&ItemKey::AlbumArtist))
             .map(|s| s.to_string());
 
         let series = tag.album().map(|s| s.to_string());
 
-        let series_position = tag.track()
-            .or_else(|| tag.disk())
-            .map(|n| n as f32);
+        let series_position = tag.track().or_else(|| tag.disk()).map(|n| n as f32);
 
         let cover_art = self.extract_cover_art(&tagged_file);
 
-        Ok((title, author, narrator, description, series, series_position, cover_art))
+        Ok((
+            title,
+            author,
+            narrator,
+            description,
+            series,
+            series_position,
+            cover_art,
+        ))
     }
 
     fn extract_cover_art(&self, tagged_file: &TaggedFile) -> Option<Vec<u8>> {
@@ -267,7 +282,9 @@ mod tests {
         let extractor = MetadataExtractor::new().expect("Failed to create extractor");
 
         let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
-        temp_file.write_all(b"This is not an audio file").expect("Failed to write");
+        temp_file
+            .write_all(b"This is not an audio file")
+            .expect("Failed to write");
         temp_file.flush().expect("Failed to flush");
 
         let result = extractor.extract_tags(temp_file.path());

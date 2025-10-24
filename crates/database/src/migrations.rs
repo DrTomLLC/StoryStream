@@ -37,9 +37,9 @@ pub async fn run_migrations(pool: &DbPool) -> Result<(), AppError> {
         )
         "#,
     )
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to create migrations table", e))?;
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to create migrations table", e))?;
 
     // Run each migration
     run_migration(pool, 1, MIGRATION_001).await?;
@@ -54,11 +54,12 @@ pub async fn run_migrations(pool: &DbPool) -> Result<(), AppError> {
 /// Runs a single migration if not already applied
 async fn run_migration(pool: &DbPool, version: i64, sql: &str) -> Result<(), AppError> {
     // Check if migration already applied
-    let applied: Option<i64> = sqlx::query_scalar("SELECT version FROM schema_migrations WHERE version = ?")
-        .bind(version)
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to check migration status", e))?;
+    let applied: Option<i64> =
+        sqlx::query_scalar("SELECT version FROM schema_migrations WHERE version = ?")
+            .bind(version)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::database("Failed to check migration status", e))?;
 
     if applied.is_some() {
         return Ok(());
@@ -111,10 +112,11 @@ mod tests {
         run_migrations(&pool).await.unwrap();
 
         // Verify all migrations were applied
-        let versions: Vec<i64> = sqlx::query_scalar("SELECT version FROM schema_migrations ORDER BY version")
-            .fetch_all(&pool)
-            .await
-            .unwrap();
+        let versions: Vec<i64> =
+            sqlx::query_scalar("SELECT version FROM schema_migrations ORDER BY version")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
 
         assert_eq!(versions, vec![1, 2, 3, 4, 5]);
     }

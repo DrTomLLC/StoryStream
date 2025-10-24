@@ -186,7 +186,8 @@ impl App {
             KeyCode::Char('t') => {
                 self.state.next_theme();
                 self.theme = Theme::new(self.state.theme);
-                self.state.set_status(format!("Theme: {}", self.state.theme.name()));
+                self.state
+                    .set_status(format!("Theme: {}", self.state.theme.name()));
                 return Ok(());
             }
             _ => {}
@@ -262,12 +263,18 @@ impl App {
             }
             KeyCode::Left => {
                 if modifiers.contains(KeyModifiers::SHIFT) {
-                    self.state.playback.position =
-                        self.state.playback.position.saturating_sub(Duration::from_secs(30));
+                    self.state.playback.position = self
+                        .state
+                        .playback
+                        .position
+                        .saturating_sub(Duration::from_secs(30));
                     self.state.set_status("Seek backward 30s");
                 } else {
-                    self.state.playback.position =
-                        self.state.playback.position.saturating_sub(Duration::from_secs(10));
+                    self.state.playback.position = self
+                        .state
+                        .playback
+                        .position
+                        .saturating_sub(Duration::from_secs(10));
                     self.state.set_status("Seek backward 10s");
                 }
             }
@@ -285,13 +292,15 @@ impl App {
             KeyCode::Char('[') => {
                 if self.state.playback.speed > 0.5 {
                     self.state.playback.speed = (self.state.playback.speed - 0.1).max(0.5);
-                    self.state.set_status(format!("Speed: {:.1}x", self.state.playback.speed));
+                    self.state
+                        .set_status(format!("Speed: {:.1}x", self.state.playback.speed));
                 }
             }
             KeyCode::Char(']') => {
                 if self.state.playback.speed < 3.0 {
                     self.state.playback.speed = (self.state.playback.speed + 0.1).min(3.0);
-                    self.state.set_status(format!("Speed: {:.1}x", self.state.playback.speed));
+                    self.state
+                        .set_status(format!("Speed: {:.1}x", self.state.playback.speed));
                 }
             }
             KeyCode::Char('\\') => {

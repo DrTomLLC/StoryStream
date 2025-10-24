@@ -4,7 +4,7 @@
 use crate::state::AppState;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
@@ -123,7 +123,11 @@ fn render_top_books(frame: &mut Frame, area: Rect, theme: &crate::theme::Theme) 
         ("1. 📖 Moby Dick", "Herman Melville", "23.5 hours"),
         ("2. 📖 War and Peace", "Leo Tolstoy", "61.2 hours"),
         ("3. 📖 Harry Potter Series", "J.K. Rowling", "117.3 hours"),
-        ("4. 📖 The Lord of the Rings", "J.R.R. Tolkien", "54.8 hours"),
+        (
+            "4. 📖 The Lord of the Rings",
+            "J.R.R. Tolkien",
+            "54.8 hours",
+        ),
         ("5. 📖 Foundation Series", "Isaac Asimov", "42.1 hours"),
     ];
 

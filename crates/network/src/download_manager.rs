@@ -3,11 +3,9 @@
 
 use crate::client::Client;
 use crate::error::{NetworkError, NetworkResult};
-use crate::progress::ProgressTracker;
-use bytes::Bytes;
 use futures::StreamExt;
 use std::collections::{HashMap, VecDeque};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -241,7 +239,9 @@ impl AdvancedDownloadManager {
             handle.abort();
         }
 
-        state.status.insert(id.to_string(), DownloadStatus::Cancelled);
+        state
+            .status
+            .insert(id.to_string(), DownloadStatus::Cancelled);
         Ok(())
     }
 

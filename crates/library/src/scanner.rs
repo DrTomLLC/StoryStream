@@ -2,9 +2,7 @@
 
 use crate::error::{LibraryError, Result};
 use log::{debug, error, info, warn};
-use notify::{
-    Error as NotifyError, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
-};
+use notify::{Error as NotifyError, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{
@@ -46,10 +44,7 @@ impl Default for ScannerConfig {
             max_depth: Some(10), // Reasonable default to prevent infinite recursion
             min_file_size: 1024, // 1 KB minimum
             follow_symlinks: false,
-            supported_extensions: SUPPORTED_EXTENSIONS
-                .iter()
-                .map(|s| s.to_string())
-                .collect(),
+            supported_extensions: SUPPORTED_EXTENSIONS.iter().map(|s| s.to_string()).collect(),
             debounce_ms: DEFAULT_DEBOUNCE_MS,
         }
     }
@@ -143,9 +138,7 @@ impl LibraryScanner {
             }
 
             // Skip if we've already scanned this path (handles duplicate paths)
-            let canonical = path
-                .canonicalize()
-                .unwrap_or_else(|_| path.clone());
+            let canonical = path.canonicalize().unwrap_or_else(|_| path.clone());
             if scanned_paths.contains(&canonical) {
                 debug!("Skipping already scanned path: {}", watch_path);
                 continue;
@@ -240,8 +233,7 @@ impl LibraryScanner {
         }
 
         // Check file size
-        let metadata = std::fs::metadata(path)
-            .map_err(|e| LibraryError::Io(e))?;
+        let metadata = std::fs::metadata(path).map_err(|e| LibraryError::Io(e))?;
 
         if metadata.len() < self.config.min_file_size {
             return Ok(false);
@@ -268,19 +260,20 @@ impl LibraryScanner {
         let config = self.config.clone();
         let running = self.running.clone();
 
-        let mut watcher = notify::recommended_watcher(move |res: std::result::Result<Event, NotifyError>| {
-            match res {
-                Ok(event) => {
-                    if let Err(e) = handle_fs_event(event, &event_tx, &config) {
-                        error!("Error handling file system event: {}", e);
+        let mut watcher =
+            notify::recommended_watcher(move |res: std::result::Result<Event, NotifyError>| {
+                match res {
+                    Ok(event) => {
+                        if let Err(e) = handle_fs_event(event, &event_tx, &config) {
+                            error!("Error handling file system event: {}", e);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Watch error: {}", e);
+                        let _ = event_tx.blocking_send(ScanEvent::ScanError(e.to_string()));
                     }
                 }
-                Err(e) => {
-                    error!("Watch error: {}", e);
-                    let _ = event_tx.blocking_send(ScanEvent::ScanError(e.to_string()));
-                }
-            }
-        })
+            })
             .map_err(|e| LibraryError::ScannerError(format!("Failed to create watcher: {}", e)))?;
 
         // Watch all configured paths

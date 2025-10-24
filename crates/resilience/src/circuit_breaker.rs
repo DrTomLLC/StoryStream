@@ -82,7 +82,10 @@ impl CircuitBreaker {
 
     /// Gets the current state
     pub fn state(&self) -> CircuitState {
-        self.state.lock().map(|s| s.state).unwrap_or(CircuitState::Open)
+        self.state
+            .lock()
+            .map(|s| s.state)
+            .unwrap_or(CircuitState::Open)
     }
 
     /// Records a successful operation
@@ -120,7 +123,9 @@ impl CircuitBreaker {
 
     /// Checks if a request can proceed
     pub fn can_proceed(&self) -> ResilienceResult<()> {
-        let mut state = self.state.lock()
+        let mut state = self
+            .state
+            .lock()
             .map_err(|_| ResilienceError::Custom("Lock poisoned".to_string()))?;
 
         match state.state {
@@ -239,8 +244,8 @@ mod tests {
 
     #[test]
     fn test_circuit_closes_after_success_threshold() {
-        let config = CircuitBreakerConfig::new(2, Duration::from_millis(50))
-            .with_success_threshold(2);
+        let config =
+            CircuitBreakerConfig::new(2, Duration::from_millis(50)).with_success_threshold(2);
         let cb = CircuitBreaker::new(config);
 
         // Open the circuit

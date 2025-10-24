@@ -18,9 +18,9 @@ impl LibriVoxSource {
         let client = reqwest::blocking::Client::builder()
             .timeout(StdDuration::from_secs(30))
             .user_agent(concat!(
-            env!("CARGO_PKG_NAME"),
-            "/",
-            env!("CARGO_PKG_VERSION"),
+                env!("CARGO_PKG_NAME"),
+                "/",
+                env!("CARGO_PKG_VERSION"),
             ))
             .build()
             .ok();
@@ -37,7 +37,9 @@ impl LibriVoxSource {
             return Err(SourceError::InvalidQuery("Empty query".to_string()));
         }
 
-        let client = self.client.as_ref()
+        let client = self
+            .client
+            .as_ref()
             .ok_or_else(|| SourceError::NetworkError("HTTP client not available".to_string()))?;
 
         // Build search URL with parameters
@@ -72,7 +74,9 @@ impl LibriVoxSource {
 
     /// Get book details by ID
     pub fn get_book(&self, book_id: &str) -> SourceResult<LibriVoxBook> {
-        let client = self.client.as_ref()
+        let client = self
+            .client
+            .as_ref()
             .ok_or_else(|| SourceError::NetworkError("HTTP client not available".to_string()))?;
 
         let url = format!("{}?id={}&format=json", self.base_url, book_id);
@@ -90,7 +94,8 @@ impl LibriVoxSource {
             .json()
             .map_err(|e| SourceError::ParseError(format!("JSON parse error: {}", e)))?;
 
-        api_response.books
+        api_response
+            .books
             .into_iter()
             .next()
             .ok_or(SourceError::NotFound)
@@ -98,7 +103,9 @@ impl LibriVoxSource {
 
     /// Get latest releases from LibriVox
     pub fn latest_releases(&self, limit: usize) -> SourceResult<Vec<LibriVoxBook>> {
-        let client = self.client.as_ref()
+        let client = self
+            .client
+            .as_ref()
             .ok_or_else(|| SourceError::NetworkError("HTTP client not available".to_string()))?;
 
         let url = format!("{}?format=json&limit={}", self.base_url, limit);
@@ -128,7 +135,9 @@ impl LibriVoxSource {
             return Err(SourceError::InvalidQuery("Empty author".to_string()));
         }
 
-        let client = self.client.as_ref()
+        let client = self
+            .client
+            .as_ref()
             .ok_or_else(|| SourceError::NetworkError("HTTP client not available".to_string()))?;
 
         let url = format!(
@@ -384,11 +393,8 @@ mod tests {
 
     #[test]
     fn test_book_has_download() {
-        let mut book = LibriVoxBook::new(
-            "123".to_string(),
-            "Test".to_string(),
-            "Author".to_string(),
-        );
+        let mut book =
+            LibriVoxBook::new("123".to_string(), "Test".to_string(), "Author".to_string());
 
         assert!(!book.has_download());
 
@@ -398,20 +404,23 @@ mod tests {
 
     #[test]
     fn test_book_download_url() {
-        let mut book = LibriVoxBook::new(
-            "123".to_string(),
-            "Test".to_string(),
-            "Author".to_string(),
-        );
+        let mut book =
+            LibriVoxBook::new("123".to_string(), "Test".to_string(), "Author".to_string());
 
         assert!(book.download_url().is_none());
 
         book.url_zip_file = "http://example.com/book.zip".to_string();
-        assert_eq!(book.download_url(), Some("http://example.com/book.zip".to_string()));
+        assert_eq!(
+            book.download_url(),
+            Some("http://example.com/book.zip".to_string())
+        );
 
         book.url_zip_file = String::new();
         book.url_rss = "http://example.com/rss".to_string();
-        assert_eq!(book.download_url(), Some("http://example.com/rss".to_string()));
+        assert_eq!(
+            book.download_url(),
+            Some("http://example.com/rss".to_string())
+        );
     }
 
     #[test]

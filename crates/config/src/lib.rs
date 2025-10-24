@@ -42,9 +42,9 @@ mod app_config;
 mod library_config;
 mod player_config;
 
-pub use error::{ConfigError, ConfigResult, ValidationError};  // Add ValidationError here
+pub use error::{ConfigError, ConfigResult, ValidationError}; // Add ValidationError here
 pub use manager::ConfigManager;
-pub use validation::{ConfigSection, Validator};  // Remove ValidationError from here
+pub use validation::{ConfigSection, Validator}; // Remove ValidationError from here
 
 // Re-export config sections
 pub use app_config::AppConfig;

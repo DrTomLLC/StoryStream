@@ -46,7 +46,10 @@ fn main() {
             println!("=============");
             println!("Name: {}", props.codec.name);
             println!("Type: {}", props.codec.codec_type);
-            println!("Lossless: {}", if props.codec.is_lossless { "Yes" } else { "No" });
+            println!(
+                "Lossless: {}",
+                if props.codec.is_lossless { "Yes" } else { "No" }
+            );
 
             // Bitrate is on AudioProperties, not CodecInfo
             if let Some(bitrate) = props.bitrate {
@@ -57,7 +60,10 @@ fn main() {
             let caps = props.format.capabilities();
             println!("Format Capabilities");
             println!("==================");
-            println!("Metadata Support: {}", if caps.metadata { "Yes" } else { "No" });
+            println!(
+                "Metadata Support: {}",
+                if caps.metadata { "Yes" } else { "No" }
+            );
             println!("Cover Art: {}", if caps.cover_art { "Yes" } else { "No" });
             println!("Chapters: {}", if caps.chapters { "Yes" } else { "No" });
             println!("Streaming: {}", if caps.streaming { "Yes" } else { "No" });
@@ -85,7 +91,11 @@ fn main() {
                     eprintln!("StoryStream supports: MP3, M4B, M4A, FLAC, Opus, WAV, AIFF, OGG");
                 }
                 FormatError::UnsupportedFormatWithPath { format, path } => {
-                    eprintln!("\nUnsupported format: {} in file {}", format, path.display());
+                    eprintln!(
+                        "\nUnsupported format: {} in file {}",
+                        format,
+                        path.display()
+                    );
                     eprintln!("StoryStream supports: MP3, M4B, M4A, FLAC, Opus, WAV, AIFF, OGG");
                 }
                 FormatError::CorruptedFile { path, reason } => {

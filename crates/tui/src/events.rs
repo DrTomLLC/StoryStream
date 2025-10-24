@@ -1,7 +1,9 @@
 // crates/tui/src/events.rs
 //! Event handling for TUI
 
-use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent};
+use crossterm::event::{
+    self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers, MouseEvent,
+};
 use std::time::Duration;
 
 /// Application events
@@ -37,7 +39,8 @@ impl EventHandler {
                 CrosstermEvent::Key(key) => {
                     // Check for quit keys
                     if key.code == KeyCode::Char('q')
-                        || (key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL))
+                        || (key.code == KeyCode::Char('c')
+                            && key.modifiers.contains(KeyModifiers::CONTROL))
                     {
                         Ok(AppEvent::Quit)
                     } else {

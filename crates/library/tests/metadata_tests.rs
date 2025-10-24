@@ -2,9 +2,9 @@
 // Integration tests for metadata extraction
 
 use anyhow::Result;
-use storystream_library::metadata::{ExtractedMetadata, MetadataExtractor};
 use std::io::Write;
 use std::path::Path;
+use storystream_library::metadata::{ExtractedMetadata, MetadataExtractor};
 use tempfile::NamedTempFile;
 
 // Helper to create a minimal MP3 file with ID3 tags
@@ -76,7 +76,10 @@ fn test_is_not_supported_unknown() {
 fn test_supported_extensions_contains_common_formats() {
     let extensions = MetadataExtractor::supported_extensions();
 
-    assert!(!extensions.is_empty(), "Should have some supported extensions");
+    assert!(
+        !extensions.is_empty(),
+        "Should have some supported extensions"
+    );
     assert!(extensions.contains(&"mp3"), "Should support MP3");
     assert!(extensions.contains(&"m4b"), "Should support M4B");
     assert!(extensions.contains(&"flac"), "Should support FLAC");
@@ -176,7 +179,7 @@ fn test_to_book_with_full_metadata() -> Result<()> {
         series: Some("The Great American Novels".to_string()),
         series_position: Some(1.0),
         duration: storystream_core::Duration::from_seconds(3600 * 8), // 8 hours
-        file_size: 250_000_000, // 250 MB
+        file_size: 250_000_000,                                       // 250 MB
         format: storystream_media_formats::AudioFormat::Mp3,
         bitrate: Some(128000),
         sample_rate: 44100,
@@ -189,7 +192,10 @@ fn test_to_book_with_full_metadata() -> Result<()> {
     assert_eq!(book.title, "The Great Gatsby");
     assert_eq!(book.author, Some("F. Scott Fitzgerald".to_string()));
     assert_eq!(book.narrator, Some("Jake Gyllenhaal".to_string()));
-    assert_eq!(book.description, Some("A classic American novel".to_string()));
+    assert_eq!(
+        book.description,
+        Some("A classic American novel".to_string())
+    );
     assert_eq!(book.series, Some("The Great American Novels".to_string()));
     assert_eq!(book.series_position, Some(1.0));
     assert_eq!(book.duration.as_seconds(), 3600 * 8);

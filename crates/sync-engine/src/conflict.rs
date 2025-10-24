@@ -25,9 +25,9 @@ impl ConflictResolver {
     /// Detects if two changes conflict
     pub fn detect_conflict(&self, local: &Change, remote: &Change) -> bool {
         // Changes conflict if they affect the same entity
-        local.entity_id == remote.entity_id &&
-            local.entity_type == remote.entity_type &&
-            local.device_id != remote.device_id
+        local.entity_id == remote.entity_id
+            && local.entity_type == remote.entity_type
+            && local.device_id != remote.device_id
     }
 
     /// Records a conflict
@@ -35,7 +35,9 @@ impl ConflictResolver {
         let conflict = Conflict::new(local, remote);
         let conflict_id = conflict.id.clone();
 
-        let mut conflicts = self.conflicts.lock()
+        let mut conflicts = self
+            .conflicts
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         conflicts.insert(conflict_id.clone(), conflict);
@@ -45,10 +47,13 @@ impl ConflictResolver {
 
     /// Resolves a conflict using the default strategy
     pub fn auto_resolve(&self, conflict_id: &str) -> SyncResult<Change> {
-        let mut conflicts = self.conflicts.lock()
+        let mut conflicts = self
+            .conflicts
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
-        let conflict = conflicts.get_mut(conflict_id)
+        let conflict = conflicts
+            .get_mut(conflict_id)
             .ok_or_else(|| SyncError::Custom("Conflict not found".to_string()))?;
 
         conflict.resolve(self.default_strategy);
@@ -79,10 +84,13 @@ impl ConflictResolver {
 
     /// Gets all unresolved conflicts
     pub fn unresolved_conflicts(&self) -> SyncResult<Vec<Conflict>> {
-        let conflicts = self.conflicts.lock()
+        let conflicts = self
+            .conflicts
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
-        Ok(conflicts.values()
+        Ok(conflicts
+            .values()
             .filter(|c| !c.is_resolved())
             .cloned()
             .collect())
@@ -90,14 +98,17 @@ impl ConflictResolver {
 
     /// Gets the number of unresolved conflicts
     pub fn unresolved_count(&self) -> usize {
-        self.conflicts.lock()
+        self.conflicts
+            .lock()
             .map(|c| c.values().filter(|conf| !conf.is_resolved()).count())
             .unwrap_or(0)
     }
 
     /// Clears all resolved conflicts
     pub fn clear_resolved(&self) -> SyncResult<()> {
-        let mut conflicts = self.conflicts.lock()
+        let mut conflicts = self
+            .conflicts
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
         conflicts.retain(|_, conflict| !conflict.is_resolved());

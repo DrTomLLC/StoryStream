@@ -59,10 +59,13 @@ impl SyncEngine {
         entity_id: String,
         data: serde_json::Value,
     ) -> SyncResult<()> {
-        self.tracker.record_change(change_type, entity_type, entity_id, data)?;
+        self.tracker
+            .record_change(change_type, entity_type, entity_id, data)?;
 
         // Update state
-        let mut state = self.state.lock()
+        let mut state = self
+            .state
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
         state.pending_changes = self.tracker.pending_count();
 
@@ -73,7 +76,9 @@ impl SyncEngine {
     pub fn sync(&self, remote_changes: Vec<Change>) -> SyncResult<Vec<Change>> {
         // Mark sync as in progress
         {
-            let mut state = self.state.lock()
+            let mut state = self
+                .state
+                .lock()
                 .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
             if state.in_progress {
                 return Err(SyncError::Custom("Sync already in progress".to_string()));
@@ -93,7 +98,9 @@ impl SyncEngine {
             for local in &local_changes {
                 if self.resolver.detect_conflict(local, remote) {
                     has_conflict = true;
-                    let conflict_id = self.resolver.record_conflict(local.clone(), remote.clone())?;
+                    let conflict_id = self
+                        .resolver
+                        .record_conflict(local.clone(), remote.clone())?;
                     let winner = self.resolver.auto_resolve(&conflict_id)?;
                     resolved_changes.push(winner);
                     break;
@@ -107,7 +114,8 @@ impl SyncEngine {
 
         // Add non-conflicting local changes
         for local in &local_changes {
-            let has_conflict = remote_changes.iter()
+            let has_conflict = remote_changes
+                .iter()
                 .any(|remote| self.resolver.detect_conflict(local, remote));
 
             if !has_conflict {
@@ -123,7 +131,9 @@ impl SyncEngine {
 
         // Update state
         {
-            let mut state = self.state.lock()
+            let mut state = self
+                .state
+                .lock()
                 .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
             state.last_sync = chrono::Utc::now();
             state.pending_changes = 0;
@@ -137,18 +147,24 @@ impl SyncEngine {
     /// Creates a sync request with pending changes
     pub fn create_sync_request(&self) -> SyncResult<SyncRequest> {
         let changes = self.tracker.pending_changes()?;
-        let state = self.state.lock()
+        let state = self
+            .state
+            .lock()
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))?;
 
-        Ok(SyncRequest::new(self.config.device_id.to_string(), changes)
-            .with_since(state.last_sync))
+        Ok(
+            SyncRequest::new(self.config.device_id.to_string(), changes)
+                .with_since(state.last_sync),
+        )
     }
 
     /// Processes a sync response
     pub fn process_sync_response(&self, response: SyncResponse) -> SyncResult<Vec<Change>> {
         if !response.success {
             return Err(SyncError::Network(
-                response.error.unwrap_or_else(|| "Unknown error".to_string())
+                response
+                    .error
+                    .unwrap_or_else(|| "Unknown error".to_string()),
             ));
         }
 
@@ -157,7 +173,8 @@ impl SyncEngine {
 
     /// Gets the current sync state
     pub fn state(&self) -> SyncResult<SyncState> {
-        self.state.lock()
+        self.state
+            .lock()
             .map(|s| s.clone())
             .map_err(|_| SyncError::Custom("Lock poisoned".to_string()))
     }
@@ -203,12 +220,14 @@ mod tests {
         let engine = SyncEngine::new(config);
 
         // Record local change
-        engine.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-1".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        engine
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-1".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
         // Create remote change (different entity)
         let remote_device = DeviceId::new();
@@ -233,12 +252,14 @@ mod tests {
         let engine = SyncEngine::new(config);
 
         // Record local change
-        engine.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-123".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        engine
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-123".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
         // Create conflicting remote change
         let remote_device = DeviceId::new();
@@ -262,12 +283,14 @@ mod tests {
         let config = SyncConfig::default();
         let engine = SyncEngine::new(config);
 
-        engine.record_change(
-            ChangeType::Update,
-            EntityType::Position,
-            "book-123".to_string(),
-            serde_json::json!({"position": 1000}),
-        ).unwrap();
+        engine
+            .record_change(
+                ChangeType::Update,
+                EntityType::Position,
+                "book-123".to_string(),
+                serde_json::json!({"position": 1000}),
+            )
+            .unwrap();
 
         let request = engine.create_sync_request().unwrap();
         assert_eq!(request.changes.len(), 1);
@@ -307,6 +330,9 @@ mod tests {
         // Try to start another sync
         let result = engine.sync(vec![]);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("already in progress"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("already in progress"));
     }
 }

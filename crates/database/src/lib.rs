@@ -17,8 +17,8 @@ mod tests {
     use crate::queries::books::{create_book, get_book, update_book};
     use crate::search::search_books;
     use connection::create_test_db;
-    use storystream_core::{AppError, Book, Duration, Timestamp};
     use std::path::PathBuf;
+    use storystream_core::{AppError, Book, Duration, Timestamp};
 
     #[tokio::test]
     async fn test_database_migrations() -> Result<(), AppError> {

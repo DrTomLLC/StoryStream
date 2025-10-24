@@ -2,8 +2,8 @@
 //! Engine state management
 
 use crate::{Equalizer, PlaybackStatus};
-use storystream_core::PlaybackSpeed;
 use std::time::Duration;
+use storystream_core::PlaybackSpeed;
 
 #[derive(Debug, Clone)]
 pub struct Chapter {

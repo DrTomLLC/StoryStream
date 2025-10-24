@@ -1,11 +1,11 @@
 // crates/resilience/examples/resilience_demo.rs
 //! Demonstration of resilience patterns
 
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use storystream_resilience::{
     with_retry, CircuitBreaker, CircuitBreakerConfig, RateLimiter, RetryPolicy, Timeout,
 };
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 fn main() {
     println!("Resilience Patterns Demo");

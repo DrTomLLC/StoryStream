@@ -38,20 +38,20 @@ pub async fn create_playback_state(pool: &DbPool, state: &PlaybackState) -> Resu
             last_updated = excluded.last_updated
         "#,
     )
-        .bind(state.book_id.as_string())
-        .bind(state.position.as_millis() as i64)
-        .bind(state.speed.value() as f64)
-        .bind(state.speed.has_pitch_correction() as i64)
-        .bind(state.volume as i64)
-        .bind(state.is_playing as i64)
-        .bind(equalizer_json)
-        .bind(sleep_timer_json)
-        .bind(state.skip_silence as i64)
-        .bind(state.volume_boost as i64)
-        .bind(state.last_updated.as_millis())
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to save playback state", e))?;
+    .bind(state.book_id.as_string())
+    .bind(state.position.as_millis() as i64)
+    .bind(state.speed.value() as f64)
+    .bind(state.speed.has_pitch_correction() as i64)
+    .bind(state.volume as i64)
+    .bind(state.is_playing as i64)
+    .bind(equalizer_json)
+    .bind(sleep_timer_json)
+    .bind(state.skip_silence as i64)
+    .bind(state.volume_boost as i64)
+    .bind(state.last_updated.as_millis())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to save playback state", e))?;
 
     Ok(())
 }
@@ -65,23 +65,25 @@ pub async fn get_playback_state(pool: &DbPool, book_id: BookId) -> Result<Playba
         FROM playback_state WHERE book_id = ?
         "#,
     )
-        .bind(book_id.as_string())
-        .fetch_optional(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to fetch playback state", e))?
-        .ok_or_else(|| AppError::RecordNotFound {
-            entity: "PlaybackState".to_string(),
-            identifier: book_id.to_string(),
-        })?;
+    .bind(book_id.as_string())
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to fetch playback state", e))?
+    .ok_or_else(|| AppError::RecordNotFound {
+        entity: "PlaybackState".to_string(),
+        identifier: book_id.to_string(),
+    })?;
 
     row_to_playback_state(row)
 }
 
 /// Updates playback position (for frequent saves)
-pub async fn update_playback_state(pool: &DbPool, book_id: BookId, position: Duration) -> Result<(), AppError> {
-    sqlx::query(
-        "UPDATE playback_state SET position_ms = ?, last_updated = ? WHERE book_id = ?"
-    )
+pub async fn update_playback_state(
+    pool: &DbPool,
+    book_id: BookId,
+    position: Duration,
+) -> Result<(), AppError> {
+    sqlx::query("UPDATE playback_state SET position_ms = ?, last_updated = ? WHERE book_id = ?")
         .bind(position.as_millis() as i64)
         .bind(Timestamp::now().as_millis())
         .bind(book_id.as_string())
@@ -95,26 +97,35 @@ pub async fn update_playback_state(pool: &DbPool, book_id: BookId, position: Dur
 fn row_to_playback_state(row: sqlx::sqlite::SqliteRow) -> Result<PlaybackState, AppError> {
     use sqlx::Row;
 
-    let book_id_str: String = row.try_get("book_id")
+    let book_id_str: String = row
+        .try_get("book_id")
         .map_err(|e| AppError::database("Missing book ID", e))?;
-    let book_id = BookId::from_string(&book_id_str)
-        .map_err(|e| AppError::database("Invalid book ID", e))?;
+    let book_id =
+        BookId::from_string(&book_id_str).map_err(|e| AppError::database("Invalid book ID", e))?;
 
-    let position_ms: i64 = row.try_get("position_ms")
+    let position_ms: i64 = row
+        .try_get("position_ms")
         .map_err(|e| AppError::database("Missing position", e))?;
-    let speed: f64 = row.try_get("speed")
+    let speed: f64 = row
+        .try_get("speed")
         .map_err(|e| AppError::database("Missing speed", e))?;
-    let pitch_correction: i64 = row.try_get("pitch_correction")
+    let pitch_correction: i64 = row
+        .try_get("pitch_correction")
         .map_err(|e| AppError::database("Missing pitch correction", e))?;
-    let volume: i64 = row.try_get("volume")
+    let volume: i64 = row
+        .try_get("volume")
         .map_err(|e| AppError::database("Missing volume", e))?;
-    let is_playing: i64 = row.try_get("is_playing")
+    let is_playing: i64 = row
+        .try_get("is_playing")
         .map_err(|e| AppError::database("Missing is_playing", e))?;
-    let skip_silence: i64 = row.try_get("skip_silence")
+    let skip_silence: i64 = row
+        .try_get("skip_silence")
         .map_err(|e| AppError::database("Missing skip_silence", e))?;
-    let volume_boost: i64 = row.try_get("volume_boost")
+    let volume_boost: i64 = row
+        .try_get("volume_boost")
         .map_err(|e| AppError::database("Missing volume_boost", e))?;
-    let last_updated_ms: i64 = row.try_get("last_updated")
+    let last_updated_ms: i64 = row
+        .try_get("last_updated")
         .map_err(|e| AppError::database("Missing last_updated", e))?;
 
     let equalizer_json: Option<String> = row.try_get("equalizer_preset").ok();
@@ -131,8 +142,8 @@ fn row_to_playback_state(row: sqlx::sqlite::SqliteRow) -> Result<PlaybackState, 
         .transpose()
         .map_err(|e| AppError::database("Failed to deserialize sleep timer", e))?;
 
-    let speed_obj = PlaybackSpeed::new_unchecked(speed as f32)
-        .with_pitch_correction(pitch_correction != 0);
+    let speed_obj =
+        PlaybackSpeed::new_unchecked(speed as f32).with_pitch_correction(pitch_correction != 0);
 
     Ok(PlaybackState {
         book_id,
@@ -154,8 +165,8 @@ mod tests {
     use crate::connection::create_test_db;
     use crate::migrations::run_migrations;
     use crate::queries::books::create_book;
-    use storystream_core::Book;
     use std::path::PathBuf;
+    use storystream_core::Book;
 
     async fn setup() -> DbPool {
         let pool = create_test_db().await.unwrap();

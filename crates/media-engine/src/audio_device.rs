@@ -55,18 +55,21 @@ impl AudioDeviceManager {
 
         // Get default output device name for comparison
         let default_device = self.host.default_output_device();
-        let default_name = default_device
-            .as_ref()
-            .and_then(|d| d.name().ok());
+        let default_name = default_device.as_ref().and_then(|d| d.name().ok());
 
         // Enumerate all output devices
-        let devices = self.host.output_devices()
+        let devices = self
+            .host
+            .output_devices()
             .map_err(|e| EngineError::OutputError(format!("Failed to enumerate devices: {}", e)))?;
 
         for device in devices {
             if let Ok(name) = device.name() {
-                let info = self.get_device_info(&device, &name,
-                                                default_name.as_ref().map(|n| n == &name).unwrap_or(false))?;
+                let info = self.get_device_info(
+                    &device,
+                    &name,
+                    default_name.as_ref().map(|n| n == &name).unwrap_or(false),
+                )?;
                 self.devices_cache.insert(info.id.clone(), info);
             }
         }
@@ -75,9 +78,15 @@ impl AudioDeviceManager {
     }
 
     /// Get information about a specific device
-    fn get_device_info(&self, device: &Device, name: &str, is_default: bool) -> EngineResult<AudioDeviceInfo> {
-        let configs = device.supported_output_configs()
-            .map_err(|e| EngineError::OutputError(format!("Failed to get device configs: {}", e)))?;
+    fn get_device_info(
+        &self,
+        device: &Device,
+        name: &str,
+        is_default: bool,
+    ) -> EngineResult<AudioDeviceInfo> {
+        let configs = device.supported_output_configs().map_err(|e| {
+            EngineError::OutputError(format!("Failed to get device configs: {}", e))
+        })?;
 
         let mut sample_rates = Vec::new();
         let mut min_channels = u16::MAX;
@@ -90,7 +99,9 @@ impl AudioDeviceManager {
             let max_sr = config.max_sample_rate().0;
 
             // Add common sample rates within the range
-            for &rate in &[8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 192000] {
+            for &rate in &[
+                8000, 11025, 16000, 22050, 44100, 48000, 88200, 96000, 192000,
+            ] {
                 if rate >= min_sr && rate <= max_sr && !sample_rates.contains(&rate) {
                     sample_rates.push(rate);
                 }
@@ -103,7 +114,8 @@ impl AudioDeviceManager {
 
             // Try to get default config
             if default_config.is_none() {
-                default_config = config.try_with_sample_rate(SampleRate(48000))
+                default_config = config
+                    .try_with_sample_rate(SampleRate(48000))
                     .or_else(|| config.try_with_sample_rate(SampleRate(44100)))
                     .or_else(|| config.try_with_sample_rate(SampleRate(max_sr)));
             }
@@ -116,9 +128,13 @@ impl AudioDeviceManager {
             (config.sample_rate().0, config.channels())
         } else {
             // Fallback defaults
-            let default_sr = if sample_rates.contains(&48000) { 48000 }
-            else if sample_rates.contains(&44100) { 44100 }
-            else { *sample_rates.first().unwrap_or(&44100) };
+            let default_sr = if sample_rates.contains(&48000) {
+                48000
+            } else if sample_rates.contains(&44100) {
+                44100
+            } else {
+                *sample_rates.first().unwrap_or(&44100)
+            };
             (default_sr, 2.min(max_channels).max(min_channels))
         };
 
@@ -141,12 +157,10 @@ impl AudioDeviceManager {
     pub fn list_devices(&self) -> Vec<AudioDeviceInfo> {
         let mut devices: Vec<_> = self.devices_cache.values().cloned().collect();
         // Sort with default device first, then alphabetically
-        devices.sort_by(|a, b| {
-            match (a.is_default, b.is_default) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => a.name.cmp(&b.name),
-            }
+        devices.sort_by(|a, b| match (a.is_default, b.is_default) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
         });
         devices
     }
@@ -161,7 +175,10 @@ impl AudioDeviceManager {
     /// Select a device by ID
     pub fn select_device(&mut self, device_id: &str) -> EngineResult<()> {
         if !self.devices_cache.contains_key(device_id) {
-            return Err(EngineError::OutputError(format!("Device not found: {}", device_id)));
+            return Err(EngineError::OutputError(format!(
+                "Device not found: {}",
+                device_id
+            )));
         }
         self.selected_device_id = Some(device_id.to_string());
         Ok(())
@@ -169,7 +186,8 @@ impl AudioDeviceManager {
 
     /// Select the default output device
     pub fn select_default_device(&mut self) -> EngineResult<()> {
-        let default_device = self.devices_cache
+        let default_device = self
+            .devices_cache
             .values()
             .find(|d| d.is_default)
             .ok_or_else(|| EngineError::OutputError("No default device found".to_string()))?;
@@ -184,8 +202,9 @@ impl AudioDeviceManager {
         if let Some(device_id) = &self.selected_device_id {
             if let Some(device_info) = self.devices_cache.get(device_id) {
                 // Find the device by name
-                let devices = self.host.output_devices()
-                    .map_err(|e| EngineError::OutputError(format!("Failed to enumerate devices: {}", e)))?;
+                let devices = self.host.output_devices().map_err(|e| {
+                    EngineError::OutputError(format!("Failed to enumerate devices: {}", e))
+                })?;
 
                 for device in devices {
                     if let Ok(name) = device.name() {

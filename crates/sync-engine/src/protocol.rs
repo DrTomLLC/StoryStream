@@ -88,8 +88,7 @@ mod tests {
     fn test_sync_request_with_since() {
         let device_id = DeviceId::new();
         let since = chrono::Utc::now();
-        let request = SyncRequest::new(device_id.to_string(), vec![])
-            .with_since(since);
+        let request = SyncRequest::new(device_id.to_string(), vec![]).with_since(since);
 
         assert!(request.since.is_some());
     }

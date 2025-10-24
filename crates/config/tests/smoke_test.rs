@@ -1,10 +1,10 @@
 //! Comprehensive smoke test
 
+use std::path::PathBuf;
+use std::time::Duration;
 use storystream_config::{
     backup::ConfigBackupManager, schema, watcher::ConfigWatcher, Config, ConfigManager,
 };
-use std::path::PathBuf;
-use std::time::Duration;
 use tempfile::TempDir;
 
 #[test]

@@ -16,7 +16,7 @@ use crate::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Tabs},
     Frame,
@@ -28,8 +28,8 @@ pub fn render(frame: &mut Frame, state: &AppState, theme: &Theme) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(3), // Tabs
-            Constraint::Min(0),     // Content
-            Constraint::Length(3),  // Status bar
+            Constraint::Min(0),    // Content
+            Constraint::Length(3), // Status bar
         ])
         .split(frame.area());
 
@@ -116,11 +116,11 @@ fn render_status_bar(frame: &mut Frame, area: Rect, state: &AppState, theme: &Th
         ),
         Span::styled(status_text, theme.text_style()),
     ]))
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border_color())),
-        );
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border_color())),
+    );
 
     frame.render_widget(status, area);
 }

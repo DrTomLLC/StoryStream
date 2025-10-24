@@ -20,7 +20,11 @@ async fn main() -> Result<()> {
             // Launch integrated TUI mode with real audio playback
             tui_mode::run_tui().await?;
         }
-        Commands::Play { book, speed, volume } => {
+        Commands::Play {
+            book,
+            speed,
+            volume,
+        } => {
             println!("Playing: {}", book);
             if let Some(s) = speed {
                 println!("  Speed: {}x", s);

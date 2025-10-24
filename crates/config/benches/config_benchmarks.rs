@@ -3,8 +3,8 @@
 //! Run with: cargo bench --package storystream-config
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use storystream_config::{Config, ConfigManager};
 use std::path::PathBuf;
+use storystream_config::{Config, ConfigManager};
 use tempfile::TempDir;
 
 fn setup_test_dir() -> (TempDir, PathBuf) {

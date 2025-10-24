@@ -11,7 +11,11 @@ pub struct SearchResult<T> {
 }
 
 /// Searches books by text query
-pub async fn search_books(pool: &DbPool, query: &str, limit: i64) -> Result<Vec<SearchResult<Book>>, AppError> {
+pub async fn search_books(
+    pool: &DbPool,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<SearchResult<Book>>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT b.id, b.title, b.author, b.narrator, b.series, b.series_position,
@@ -44,7 +48,11 @@ pub async fn search_books(pool: &DbPool, query: &str, limit: i64) -> Result<Vec<
 }
 
 /// Searches chapters by text query
-pub async fn search_chapters(pool: &DbPool, query: &str, limit: i64) -> Result<Vec<SearchResult<Chapter>>, AppError> {
+pub async fn search_chapters(
+    pool: &DbPool,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<SearchResult<Chapter>>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT c.id, c.book_id, c.title, c.index_number, c.start_time_ms, c.end_time_ms, c.image_path,
@@ -67,13 +75,20 @@ pub async fn search_chapters(pool: &DbPool, query: &str, limit: i64) -> Result<V
             use sqlx::Row;
             let rank: f64 = row.try_get("rank").unwrap_or(0.0);
             let chapter = crate::queries::chapters::row_to_chapter(row)?;
-            Ok(SearchResult { item: chapter, rank })
+            Ok(SearchResult {
+                item: chapter,
+                rank,
+            })
         })
         .collect()
 }
 
 /// Searches bookmarks by text query
-pub async fn search_bookmarks(pool: &DbPool, query: &str, limit: i64) -> Result<Vec<SearchResult<Bookmark>>, AppError> {
+pub async fn search_bookmarks(
+    pool: &DbPool,
+    query: &str,
+    limit: i64,
+) -> Result<Vec<SearchResult<Bookmark>>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT bm.id, bm.book_id, bm.position_ms, bm.title, bm.note, bm.created_at, bm.updated_at,
@@ -85,18 +100,21 @@ pub async fn search_bookmarks(pool: &DbPool, query: &str, limit: i64) -> Result<
         LIMIT ?
         "#,
     )
-        .bind(query)
-        .bind(limit)
-        .fetch_all(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to search bookmarks", e))?;
+    .bind(query)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to search bookmarks", e))?;
 
     rows.into_iter()
         .map(|row| {
             use sqlx::Row;
             let rank: f64 = row.try_get("rank").unwrap_or(0.0);
             let bookmark = crate::queries::bookmarks::row_to_bookmark(row)?;
-            Ok(SearchResult { item: bookmark, rank })
+            Ok(SearchResult {
+                item: bookmark,
+                rank,
+            })
         })
         .collect()
 }
@@ -107,8 +125,8 @@ mod tests {
     use crate::connection::create_test_db;
     use crate::migrations::run_migrations;
     use crate::queries::books::create_book;
-    use storystream_core::{Book, Duration};
     use std::path::PathBuf;
+    use storystream_core::{Book, Duration};
 
     async fn setup() -> DbPool {
         let pool = create_test_db().await.unwrap();

@@ -100,12 +100,7 @@ pub struct Book {
 
 impl Book {
     /// Creates a new book with required fields
-    pub fn new(
-        title: String,
-        file_path: PathBuf,
-        file_size: u64,
-        duration: Duration,
-    ) -> Self {
+    pub fn new(title: String, file_path: PathBuf, file_size: u64, duration: Duration) -> Self {
         Self {
             id: BookId::new(),
             title,

@@ -11,16 +11,16 @@ pub async fn create_bookmark(pool: &DbPool, bookmark: &Bookmark) -> Result<(), A
         VALUES (?, ?, ?, ?, ?, ?, ?)
         "#,
     )
-        .bind(bookmark.id.as_string())
-        .bind(bookmark.book_id.as_string())
-        .bind(bookmark.position.as_millis() as i64)
-        .bind(&bookmark.title)
-        .bind(&bookmark.note)
-        .bind(bookmark.created_at.as_millis())
-        .bind(bookmark.updated_at.as_millis())
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to create bookmark", e))?;
+    .bind(bookmark.id.as_string())
+    .bind(bookmark.book_id.as_string())
+    .bind(bookmark.position.as_millis() as i64)
+    .bind(&bookmark.title)
+    .bind(&bookmark.note)
+    .bind(bookmark.created_at.as_millis())
+    .bind(bookmark.updated_at.as_millis())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to create bookmark", e))?;
 
     Ok(())
 }
@@ -69,21 +69,26 @@ pub async fn delete_bookmark(pool: &DbPool, id: BookmarkId) -> Result<(), AppErr
 pub(crate) fn row_to_bookmark(row: sqlx::sqlite::SqliteRow) -> Result<Bookmark, AppError> {
     use sqlx::Row;
 
-    let id_str: String = row.try_get("id")
+    let id_str: String = row
+        .try_get("id")
         .map_err(|e| AppError::database("Missing bookmark ID", e))?;
     let id = BookmarkId::from_string(&id_str)
         .map_err(|e| AppError::database("Invalid bookmark ID", e))?;
 
-    let book_id_str: String = row.try_get("book_id")
+    let book_id_str: String = row
+        .try_get("book_id")
         .map_err(|e| AppError::database("Missing book ID", e))?;
-    let book_id = BookId::from_string(&book_id_str)
-        .map_err(|e| AppError::database("Invalid book ID", e))?;
+    let book_id =
+        BookId::from_string(&book_id_str).map_err(|e| AppError::database("Invalid book ID", e))?;
 
-    let position_ms: i64 = row.try_get("position_ms")
+    let position_ms: i64 = row
+        .try_get("position_ms")
         .map_err(|e| AppError::database("Missing position", e))?;
-    let created_at_ms: i64 = row.try_get("created_at")
+    let created_at_ms: i64 = row
+        .try_get("created_at")
         .map_err(|e| AppError::database("Missing created_at", e))?;
-    let updated_at_ms: i64 = row.try_get("updated_at")
+    let updated_at_ms: i64 = row
+        .try_get("updated_at")
         .map_err(|e| AppError::database("Missing updated_at", e))?;
 
     Ok(Bookmark {
@@ -103,8 +108,8 @@ mod tests {
     use crate::connection::create_test_db;
     use crate::migrations::run_migrations;
     use crate::queries::books::create_book;
-    use storystream_core::Book;
     use std::path::PathBuf;
+    use storystream_core::Book;
 
     async fn setup() -> DbPool {
         let pool = create_test_db().await.unwrap();

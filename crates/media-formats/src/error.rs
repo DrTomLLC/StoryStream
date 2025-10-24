@@ -6,7 +6,7 @@ use std::path::PathBuf;
 pub type FormatResult<T> = Result<T, FormatError>;
 
 /// Errors that can occur during format detection and analysis
-#[derive(Debug, Clone, PartialEq)]  // Added PartialEq
+#[derive(Debug, Clone, PartialEq)] // Added PartialEq
 pub enum FormatError {
     // Old variants that existing code expects
     /// Format could not be determined
@@ -54,18 +54,35 @@ impl std::fmt::Display for FormatError {
                 write!(f, "Failed to read file {}: {}", path.display(), reason)
             }
             Self::UnsupportedFormatWithPath { format, path } => {
-                write!(f, "Unsupported audio format: {} in file {}", format, path.display())
+                write!(
+                    f,
+                    "Unsupported audio format: {} in file {}",
+                    format,
+                    path.display()
+                )
             }
             Self::NoDecoderAvailable { format } => {
                 write!(f, "No decoder available for format {}", format)
             }
             Self::CorruptedFile { path, reason } => {
-                write!(f, "Corrupted or invalid audio file: {} - {}", path.display(), reason)
+                write!(
+                    f,
+                    "Corrupted or invalid audio file: {} - {}",
+                    path.display(),
+                    reason
+                )
             }
             Self::ProbeError { path, reason } => {
-                write!(f, "Failed to probe file format for {}: {}", path.display(), reason)
+                write!(
+                    f,
+                    "Failed to probe file format for {}: {}",
+                    path.display(),
+                    reason
+                )
             }
-            Self::CodecError { reason } => write!(f, "Failed to parse codec parameters: {}", reason),
+            Self::CodecError { reason } => {
+                write!(f, "Failed to parse codec parameters: {}", reason)
+            }
             Self::InvalidProperties { field, value } => {
                 write!(f, "Invalid audio properties: {} = {}", field, value)
             }
@@ -118,7 +135,10 @@ impl FormatError {
     pub fn is_recoverable(&self) -> bool {
         matches!(
             self,
-            Self::FileNotFound { .. } | Self::UnknownFormat | Self::UnsupportedFormat(_) | Self::UnsupportedFormatWithPath { .. }
+            Self::FileNotFound { .. }
+                | Self::UnknownFormat
+                | Self::UnsupportedFormat(_)
+                | Self::UnsupportedFormatWithPath { .. }
         )
     }
 

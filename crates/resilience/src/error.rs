@@ -15,13 +15,12 @@ pub enum ResilienceError {
 
     /// All retry attempts exhausted
     #[error("All {attempts} retry attempts exhausted: {last_error}")]
-    RetriesExhausted {
-        attempts: usize,
-        last_error: String,
-    },
+    RetriesExhausted { attempts: usize, last_error: String },
 
     /// Circuit breaker is open
-    #[error("Circuit breaker is open (failures: {failures}, last failure: {last_failure_ago:?} ago)")]
+    #[error(
+        "Circuit breaker is open (failures: {failures}, last failure: {last_failure_ago:?} ago)"
+    )]
     CircuitBreakerOpen {
         failures: usize,
         last_failure_ago: std::time::Duration,

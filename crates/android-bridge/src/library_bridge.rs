@@ -7,9 +7,13 @@ use crate::ffi::{
     bool_to_jboolean, jstring_raw_to_string, option_string_to_jstring, string_to_jstring, FfiError,
     FfiResult, HandleManager,
 };
-use jni::{objects::JClass, sys::{jboolean, jint, jlong, jstring}, JNIEnv};
-use std::panic;
 use crate::jni_safe;
+use jni::{
+    objects::JClass,
+    sys::{jboolean, jint, jlong, jstring},
+    JNIEnv,
+};
+use std::panic;
 // Required for jni_safe! macro
 
 /// Global library handle manager
@@ -47,13 +51,18 @@ pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeInitialize(
 
         // Validate path
         if path.is_empty() {
-            return Err(FfiError::General("Library root path cannot be empty".to_string()));
+            return Err(FfiError::General(
+                "Library root path cannot be empty".to_string(),
+            ));
         }
 
         let context = LibraryContext::new(path.clone());
         let handle = LIBRARY_HANDLES.insert(context);
 
-        crate::ffi::log_info("StoryStream", &format!("Initialized library at: {} (handle: {})", path, handle));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Initialized library at: {} (handle: {})", path, handle),
+        );
 
         Ok(handle)
     })
@@ -71,7 +80,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeDestroy(
 ) {
     jni_safe!(env, (), {
         LIBRARY_HANDLES.remove(handle)?;
-        crate::ffi::log_info("StoryStream", &format!("Destroyed library handle: {}", handle));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Destroyed library handle: {}", handle),
+        );
         Ok(())
     })
 }
@@ -278,7 +290,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookCoverArt(
         LIBRARY_HANDLES.get(handle)?;
         let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        crate::ffi::log_info("StoryStream", &format!("Getting cover art for book: {}", id));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Getting cover art for book: {}", id),
+        );
 
         // Placeholder: Would query database
         Ok(std::ptr::null_mut()) // Return null for no cover art
@@ -372,7 +387,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeUpdateBookMetada
         LIBRARY_HANDLES.get(handle)?;
         let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        crate::ffi::log_info("StoryStream", &format!("Updating metadata for book: {}", id));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Updating metadata for book: {}", id),
+        );
 
         // Placeholder: Would update database
         Ok(bool_to_jboolean(true))

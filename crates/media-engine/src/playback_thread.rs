@@ -4,9 +4,9 @@ use crate::output::AudioOutput;
 use crate::playback::{PlaybackState, PlaybackStatus};
 use crate::speed::{Speed, SpeedProcessor};
 use crossbeam_channel::{bounded, Sender};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{self, JoinHandle};
 use std::time::Instant;
 
@@ -33,11 +33,7 @@ struct AudioPipeline {
 }
 
 impl AudioPipeline {
-    fn new(
-        decoder: AudioDecoder,
-        sample_rate: u32,
-        channels: u16,
-    ) -> Result<Self, String> {
+    fn new(decoder: AudioDecoder, sample_rate: u32, channels: u16) -> Result<Self, String> {
         let speed_processor = SpeedProcessor::new(sample_rate, channels);
         let equalizer = Equalizer::default();
         let output = AudioOutput::new(sample_rate, channels)
@@ -64,7 +60,9 @@ impl AudioPipeline {
         };
 
         // Process through speed adjustment
-        let speed_adjusted = self.speed_processor.process(&decoded)
+        let speed_adjusted = self
+            .speed_processor
+            .process(&decoded)
             .map_err(|e| format!("Speed processing error: {}", e))?;
 
         // Apply equalizer (for now just pass through since process method doesn't exist)
@@ -84,7 +82,8 @@ impl AudioPipeline {
     }
 
     fn seek(&mut self, position: Duration) -> Result<(), String> {
-        self.decoder.seek(position)
+        self.decoder
+            .seek(position)
             .map_err(|e| format!("Seek failed: {}", e))?;
 
         // Clear speed processor buffers after seeking
@@ -179,7 +178,8 @@ pub fn start_playback_thread(
                         if let Err(e) = pipeline.seek(position) {
                             log::error!("Seek failed: {}", e);
                         } else {
-                            accumulated_samples = (position.as_secs_f64() * sample_rate as f64) as u64;
+                            accumulated_samples =
+                                (position.as_secs_f64() * sample_rate as f64) as u64;
                             if let Ok(mut pos) = current_position.lock() {
                                 *pos = position;
                             }
@@ -217,16 +217,14 @@ pub fn start_playback_thread(
 
                         // Update position based on actual samples processed
                         // Account for speed adjustment
-                        let current_speed = speed.lock()
-                            .map(|s| s.value())
-                            .unwrap_or(1.0);
+                        let current_speed = speed.lock().map(|s| s.value()).unwrap_or(1.0);
 
                         accumulated_samples += (4096.0 / current_speed) as u64;
 
                         // Update position periodically (not every chunk for performance)
                         if last_position_update.elapsed() > Duration::from_millis(100) {
                             let new_position = Duration::from_secs_f64(
-                                accumulated_samples as f64 / sample_rate as f64
+                                accumulated_samples as f64 / sample_rate as f64,
                             );
 
                             if let Ok(mut pos) = current_position.lock() {
@@ -302,6 +300,7 @@ mod tests {
 // crates/media-engine/src/decoder.rs
 
 use crate::error::{EngineError, EngineResult};
+use std::fs::File;
 use std::path::Path;
 use std::time::Duration;
 use symphonia::core::audio::{AudioBufferRef, SampleBuffer};
@@ -312,7 +311,6 @@ use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
 use symphonia::default::get_codecs;
 use symphonia::default::get_probe;
-use std::fs::File;
 
 /// Audio decoder using Symphonia
 pub struct AudioDecoder {
@@ -343,7 +341,12 @@ impl AudioDecoder {
 
         // Probe the media
         let probe = get_probe()
-            .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
+            .format(
+                &hint,
+                mss,
+                &FormatOptions::default(),
+                &MetadataOptions::default(),
+            )
             .map_err(|e| EngineError::DecodeError(format!("Unsupported format: {}", e)))?;
 
         let format = probe.format;
@@ -358,10 +361,14 @@ impl AudioDecoder {
         let track_id = track.id;
 
         // Get audio parameters
-        let sample_rate = track.codec_params.sample_rate
+        let sample_rate = track
+            .codec_params
+            .sample_rate
             .ok_or_else(|| EngineError::DecodeError("Unknown sample rate".to_string()))?;
 
-        let channels = track.codec_params.channels
+        let channels = track
+            .codec_params
+            .channels
             .map(|ch| ch.count())
             .unwrap_or(2);
 
@@ -393,7 +400,10 @@ impl AudioDecoder {
                     break;
                 }
                 Err(e) => {
-                    return Err(EngineError::DecodeError(format!("Packet read error: {}", e)));
+                    return Err(EngineError::DecodeError(format!(
+                        "Packet read error: {}",
+                        e
+                    )));
                 }
             };
 
@@ -420,7 +430,9 @@ impl AudioDecoder {
             let buffer_channels = buffer_spec.channels.count();
 
             // Create or resize sample buffer
-            if self.sample_buffer.is_none() || self.sample_buffer.as_ref().unwrap().len() != buffer_duration * buffer_channels {
+            if self.sample_buffer.is_none()
+                || self.sample_buffer.as_ref().unwrap().len() != buffer_duration * buffer_channels
+            {
                 self.sample_buffer = Some(SampleBuffer::new(buffer_duration as u64, buffer_spec));
             }
 
@@ -429,7 +441,9 @@ impl AudioDecoder {
                 sample_buf.copy_interleaved_ref(decoded);
                 output.extend_from_slice(sample_buf.samples());
             } else {
-                return Err(EngineError::DecodeError("Failed to create sample buffer".to_string()));
+                return Err(EngineError::DecodeError(
+                    "Failed to create sample buffer".to_string(),
+                ));
             }
         }
 
@@ -446,7 +460,9 @@ impl AudioDecoder {
         let channels = spec.channels.count();
 
         // Create or resize sample buffer
-        if self.sample_buffer.is_none() || self.sample_buffer.as_ref().unwrap().len() != duration * channels {
+        if self.sample_buffer.is_none()
+            || self.sample_buffer.as_ref().unwrap().len() != duration * channels
+        {
             self.sample_buffer = Some(SampleBuffer::new(duration as u64, spec));
         }
 
@@ -455,7 +471,9 @@ impl AudioDecoder {
             sample_buf.copy_interleaved_ref(audio_buf);
             Ok(sample_buf.samples().to_vec())
         } else {
-            Err(EngineError::DecodeError("Failed to create sample buffer".to_string()))
+            Err(EngineError::DecodeError(
+                "Failed to create sample buffer".to_string(),
+            ))
         }
     }
 
@@ -486,7 +504,9 @@ impl AudioDecoder {
 
     /// Get the duration of the audio file
     pub fn duration(&self) -> Option<Duration> {
-        let track = self.format.tracks()
+        let track = self
+            .format
+            .tracks()
             .iter()
             .find(|t| t.id == self.track_id)?;
 
@@ -540,16 +560,56 @@ impl Default for Equalizer {
 impl Equalizer {
     fn default_bands() -> Vec<EqualizerBand> {
         vec![
-            EqualizerBand { frequency: 32.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 64.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 125.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 250.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 500.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 1000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 2000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 4000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 8000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 16000.0, gain: 0.0, q_factor: 0.7 },
+            EqualizerBand {
+                frequency: 32.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 64.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 125.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 250.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 500.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 1000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 2000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 4000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 8000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 16000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
         ]
     }
 

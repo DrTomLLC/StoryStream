@@ -1,7 +1,7 @@
 // crates/resilience/src/retry.rs
 //! Retry policies with exponential backoff
 
-use crate::error::{ResilienceError};
+use crate::error::ResilienceError;
 use std::time::Duration;
 
 /// Retry policy configuration
@@ -61,8 +61,8 @@ impl RetryPolicy {
             return Duration::from_secs(0);
         }
 
-        let base_delay = self.initial_delay.as_millis() as f64
-            * self.multiplier.powi((attempt - 1) as i32);
+        let base_delay =
+            self.initial_delay.as_millis() as f64 * self.multiplier.powi((attempt - 1) as i32);
 
         let capped_delay = base_delay.min(self.max_delay.as_millis() as f64);
 
@@ -195,8 +195,7 @@ mod tests {
 
     #[test]
     fn test_with_retry_success_after_failures() {
-        let policy = RetryPolicy::new(3)
-            .with_initial_delay(Duration::from_millis(1));
+        let policy = RetryPolicy::new(3).with_initial_delay(Duration::from_millis(1));
         let mut call_count = 0;
 
         let result = with_retry(&policy, || {
@@ -215,8 +214,7 @@ mod tests {
 
     #[test]
     fn test_with_retry_all_attempts_fail() {
-        let policy = RetryPolicy::new(3)
-            .with_initial_delay(Duration::from_millis(1));
+        let policy = RetryPolicy::new(3).with_initial_delay(Duration::from_millis(1));
         let mut call_count = 0;
 
         let result = with_retry(&policy, || {
@@ -227,7 +225,11 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(call_count, 3);
 
-        if let Err(ResilienceError::RetriesExhausted { attempts, last_error }) = result {
+        if let Err(ResilienceError::RetriesExhausted {
+            attempts,
+            last_error,
+        }) = result
+        {
             assert_eq!(attempts, 3);
             assert_eq!(last_error, "persistent error");
         } else {

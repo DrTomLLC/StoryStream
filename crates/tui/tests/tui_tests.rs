@@ -1,8 +1,8 @@
 // crates/tui/tests/tui_tests.rs
 //! Integration tests for TUI
 
-use storystream_tui::{App, AppState, PlaybackState, View};
 use std::time::Duration;
+use storystream_tui::{App, AppState, PlaybackState, View};
 
 #[test]
 fn test_app_state_creation() {

@@ -1,9 +1,9 @@
 //! Integration tests for the configuration system
 
+use std::path::PathBuf;
 use storystream_config::{
     AppConfig, Config, ConfigManager, ConfigSection, LibraryConfig, PlayerConfig, CONFIG_VERSION,
 };
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 fn setup_test_manager() -> Result<(TempDir, ConfigManager), Box<dyn std::error::Error>> {
@@ -232,6 +232,9 @@ fn test_supported_audio_extensions() {
     let expected_extensions = vec!["mp3", "m4a", "m4b", "ogg", "opus", "flac", "wav"];
 
     for ext in expected_extensions {
-        assert!(config.library.supported_extensions.contains(&ext.to_string()));
+        assert!(config
+            .library
+            .supported_extensions
+            .contains(&ext.to_string()));
     }
 }

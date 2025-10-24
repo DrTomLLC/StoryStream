@@ -411,10 +411,7 @@ mod tests {
 
     #[test]
     fn test_sleep_timer_with_fade() {
-        let timer = SleepTimer::with_fade(
-            Duration::from_seconds(1800),
-            Duration::from_seconds(30),
-        );
+        let timer = SleepTimer::with_fade(Duration::from_seconds(1800), Duration::from_seconds(30));
         assert_eq!(timer.fade_duration.as_seconds(), 30);
     }
 
@@ -444,7 +441,7 @@ mod tests {
         let fade_duration = Duration::from_seconds(30);
         let mut timer = SleepTimer {
             duration: Duration::from_seconds(60),
-            fade_duration,  // Just the variable, no Some()
+            fade_duration, // Just the variable, no Some()
             started_at: Timestamp::now(),
             state: SleepTimerState::Active,
         };
@@ -454,14 +451,14 @@ mod tests {
 
         // Simulate time passing to just before fade starts
         timer.started_at = Timestamp::from_millis(
-            Timestamp::now().as_millis() - Duration::from_seconds(30).as_millis() as i64
+            Timestamp::now().as_millis() - Duration::from_seconds(30).as_millis() as i64,
         );
 
         assert!(timer.is_fading());
 
         // Simulate more time
         timer.started_at = Timestamp::from_millis(
-            Timestamp::now().as_millis() - Duration::from_seconds(45).as_millis() as i64
+            Timestamp::now().as_millis() - Duration::from_seconds(45).as_millis() as i64,
         );
         assert!(timer.is_fading());
     }

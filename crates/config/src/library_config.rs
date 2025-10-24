@@ -55,7 +55,7 @@ impl Default for LibraryConfig {
             auto_import: false,
             extract_metadata: true,
             recursive_scan: true,
-            max_scan_depth: 0, // unlimited
+            max_scan_depth: 0,         // unlimited
             min_file_size_bytes: 1024, // 1 KB
             follow_symlinks: false,
             organize_files: false,

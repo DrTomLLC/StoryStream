@@ -26,16 +26,56 @@ impl Default for Equalizer {
 impl Equalizer {
     fn default_bands() -> Vec<EqualizerBand> {
         vec![
-            EqualizerBand { frequency: 32.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 64.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 125.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 250.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 500.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 1000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 2000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 4000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 8000.0, gain: 0.0, q_factor: 0.7 },
-            EqualizerBand { frequency: 16000.0, gain: 0.0, q_factor: 0.7 },
+            EqualizerBand {
+                frequency: 32.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 64.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 125.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 250.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 500.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 1000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 2000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 4000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 8000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
+            EqualizerBand {
+                frequency: 16000.0,
+                gain: 0.0,
+                q_factor: 0.7,
+            },
         ]
     }
 

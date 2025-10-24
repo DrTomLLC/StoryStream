@@ -37,7 +37,9 @@ impl RateLimiter {
 
     /// Attempts to acquire a token
     pub fn try_acquire(&self) -> ResilienceResult<()> {
-        let mut state = self.state.lock()
+        let mut state = self
+            .state
+            .lock()
             .map_err(|_| ResilienceError::Custom("Lock poisoned".to_string()))?;
 
         self.refill_tokens(&mut state);
@@ -110,7 +112,10 @@ mod tests {
         // Next request should be rate limited
         let result = limiter.try_acquire();
         assert!(result.is_err());
-        assert!(matches!(result, Err(ResilienceError::RateLimitExceeded { .. })));
+        assert!(matches!(
+            result,
+            Err(ResilienceError::RateLimitExceeded { .. })
+        ));
     }
 
     #[test]

@@ -80,8 +80,8 @@ pub struct BookImporter {
 impl BookImporter {
     /// Create a new book importer
     pub fn new(pool: DbPool) -> Self {
-        let metadata_extractor = MetadataExtractor::new()
-            .expect("Failed to initialize metadata extractor");
+        let metadata_extractor =
+            MetadataExtractor::new().expect("Failed to initialize metadata extractor");
 
         Self {
             pool,
@@ -101,16 +101,15 @@ impl BookImporter {
 
         // Validate file exists
         if !path.exists() {
-            return Err(LibraryError::FileNotFound(
-                path.display().to_string(),
-            ));
+            return Err(LibraryError::FileNotFound(path.display().to_string()));
         }
 
         // Validate file is actually a file (not a directory)
         if !path.is_file() {
-            return Err(LibraryError::InvalidFile(
-                format!("Path is not a file: {}", path.display()),
-            ));
+            return Err(LibraryError::InvalidFile(format!(
+                "Path is not a file: {}",
+                path.display()
+            )));
         }
 
         // Check if file is supported
@@ -119,18 +118,20 @@ impl BookImporter {
                 .extension()
                 .and_then(|e| e.to_str())
                 .unwrap_or("unknown");
-            return Err(LibraryError::UnsupportedFormat(
-                format!("Unsupported file format: .{}", extension),
-            ));
+            return Err(LibraryError::UnsupportedFormat(format!(
+                "Unsupported file format: .{}",
+                extension
+            )));
         }
 
         // Check if book already exists in database (by file path)
         let canonical_path = self.canonicalize_path(path)?;
         if let Some(existing_book) = self.find_by_path(&canonical_path).await? {
             if !options.overwrite_existing {
-                return Err(LibraryError::ImportFailed(
-                    format!("Book already exists in library: {}", existing_book.title),
-                ));
+                return Err(LibraryError::ImportFailed(format!(
+                    "Book already exists in library: {}",
+                    existing_book.title
+                )));
             }
             debug!("Overwriting existing book: {}", existing_book.title);
         }
@@ -170,7 +171,12 @@ impl BookImporter {
 
         for (index, path) in paths.iter().enumerate() {
             let path = path.as_ref();
-            debug!("Processing file {}/{}: {}", index + 1, paths.len(), path.display());
+            debug!(
+                "Processing file {}/{}: {}",
+                index + 1,
+                paths.len(),
+                path.display()
+            );
 
             match self.import_file(path, options.clone()).await {
                 Ok(book) => {
@@ -181,9 +187,11 @@ impl BookImporter {
                         warn!("Skipping file due to error: {} - {}", path.display(), e);
                         errors.push((path.to_path_buf(), e));
                     } else {
-                        return Err(LibraryError::ImportFailed(
-                            format!("Failed to import {}: {}", path.display(), e),
-                        ));
+                        return Err(LibraryError::ImportFailed(format!(
+                            "Failed to import {}: {}",
+                            path.display(),
+                            e
+                        )));
                     }
                 }
             }
@@ -214,15 +222,14 @@ impl BookImporter {
         info!("Importing from directory: {}", directory.display());
 
         if !directory.exists() {
-            return Err(LibraryError::FileNotFound(
-                directory.display().to_string(),
-            ));
+            return Err(LibraryError::FileNotFound(directory.display().to_string()));
         }
 
         if !directory.is_dir() {
-            return Err(LibraryError::InvalidFile(
-                format!("Path is not a directory: {}", directory.display()),
-            ));
+            return Err(LibraryError::InvalidFile(format!(
+                "Path is not a directory: {}",
+                directory.display()
+            )));
         }
 
         // Scan directory for audio files
@@ -297,8 +304,7 @@ impl BookImporter {
 
     /// Canonicalize a file path
     fn canonicalize_path(&self, path: &Path) -> Result<PathBuf> {
-        path.canonicalize()
-            .map_err(|e| LibraryError::Io(e))
+        path.canonicalize().map_err(|e| LibraryError::Io(e))
     }
 
     /// Find a book by its file path
@@ -329,8 +335,7 @@ mod tests {
     use tempfile::{NamedTempFile, TempDir};
 
     async fn setup_test_db() -> Result<(DbPool, NamedTempFile)> {
-        let temp_file = NamedTempFile::new()
-            .map_err(LibraryError::Io)?;
+        let temp_file = NamedTempFile::new().map_err(LibraryError::Io)?;
 
         let db_path = temp_file
             .path()
@@ -338,9 +343,7 @@ mod tests {
             .ok_or_else(|| LibraryError::InvalidFile("Invalid path encoding".to_string()))?;
 
         let config = DatabaseConfig::new(db_path);
-        let pool = connect(config)
-            .await
-            .map_err(LibraryError::Database)?;
+        let pool = connect(config).await.map_err(LibraryError::Database)?;
 
         run_migrations(&pool)
             .await
@@ -402,11 +405,9 @@ mod tests {
         let importer = BookImporter::new(pool);
 
         // Create a temp file with unsupported extension
-        let temp_file = NamedTempFile::with_suffix(".txt")
-            .map_err(LibraryError::Io)?;
+        let temp_file = NamedTempFile::with_suffix(".txt").map_err(LibraryError::Io)?;
 
-        std::fs::write(temp_file.path(), b"not audio")
-            .map_err(LibraryError::Io)?;
+        std::fs::write(temp_file.path(), b"not audio").map_err(LibraryError::Io)?;
 
         let result = importer
             .import_file(temp_file.path(), ImportOptions::default())
@@ -422,8 +423,7 @@ mod tests {
         let (pool, _temp) = setup_test_db().await?;
         let importer = BookImporter::new(pool);
 
-        let temp_dir = TempDir::new()
-            .map_err(LibraryError::Io)?;
+        let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
         let result = importer
             .import_file(temp_dir.path(), ImportOptions::default())
@@ -440,10 +440,8 @@ mod tests {
         let importer = BookImporter::new(pool);
 
         // Create mix of valid and invalid files
-        let invalid_file = NamedTempFile::with_suffix(".txt")
-            .map_err(LibraryError::Io)?;
-        std::fs::write(invalid_file.path(), b"not audio")
-            .map_err(LibraryError::Io)?;
+        let invalid_file = NamedTempFile::with_suffix(".txt").map_err(LibraryError::Io)?;
+        std::fs::write(invalid_file.path(), b"not audio").map_err(LibraryError::Io)?;
 
         let paths = vec![
             PathBuf::from("/nonexistent1.mp3"),
@@ -486,8 +484,7 @@ mod tests {
         let (pool, _temp) = setup_test_db().await?;
         let importer = BookImporter::new(pool);
 
-        let temp_dir = TempDir::new()
-            .map_err(LibraryError::Io)?;
+        let temp_dir = TempDir::new().map_err(LibraryError::Io)?;
 
         let files = importer.scan_directory(temp_dir.path())?;
         assert_eq!(files.len(), 0);
@@ -515,8 +512,7 @@ mod tests {
         let (pool, _temp) = setup_test_db().await?;
         let importer = BookImporter::new(pool);
 
-        let temp_file = NamedTempFile::new()
-            .map_err(LibraryError::Io)?;
+        let temp_file = NamedTempFile::new().map_err(LibraryError::Io)?;
 
         let result = importer
             .import_directory(temp_file.path(), ImportOptions::default())

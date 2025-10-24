@@ -98,7 +98,7 @@ mod mime_tests {
     fn test_mime_type_mp3() {
         let mime = MimeType::from_format(AudioFormat::Mp3);
         assert_eq!(mime.primary(), "audio/mpeg"); // Correct MIME type
-        // MP3's standard MIME type is audio/mpeg, not audio/mp3
+                                                  // MP3's standard MIME type is audio/mpeg, not audio/mp3
         assert!(mime.all().contains(&"audio/mpeg"));
     }
 

@@ -33,9 +33,9 @@ impl FeedParser {
             Ok(FeedType::Rss)
         } else if content.contains("<feed")
             && (content.contains("xmlns=\"http://www.w3.org/2005/Atom\"")
-            || content.contains("xmlns=\"https://www.w3.org/2005/Atom\"")
-            || content.contains("http://www.w3.org/2005/Atom")
-            || content.contains("https://www.w3.org/2005/Atom"))
+                || content.contains("xmlns=\"https://www.w3.org/2005/Atom\"")
+                || content.contains("http://www.w3.org/2005/Atom")
+                || content.contains("https://www.w3.org/2005/Atom"))
         {
             Ok(FeedType::Atom)
         } else {
@@ -226,7 +226,9 @@ impl FeedParser {
                                 "title" if item.title.is_empty() => {
                                     item.title = trimmed.to_string()
                                 }
-                                "summary" | "content" => item.description = Some(trimmed.to_string()),
+                                "summary" | "content" => {
+                                    item.description = Some(trimmed.to_string())
+                                }
                                 "author" => item.author = Some(trimmed.to_string()),
                                 "published" | "updated" => {
                                     item.published = DateTime::parse_from_rfc3339(trimmed)

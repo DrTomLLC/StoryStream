@@ -4,7 +4,7 @@
 use crate::state::AppState;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
@@ -62,26 +62,29 @@ fn render_book_list(frame: &mut Frame, area: Rect, state: &AppState, theme: &cra
 }
 
 /// Renders library information
-fn render_library_info(frame: &mut Frame, area: Rect, _state: &AppState, theme: &crate::theme::Theme) {
-    let info = Paragraph::new(vec![
-        Line::from(vec![
-            Span::styled("Total: ", theme.text_secondary_style()),
-            Span::styled("8 books", theme.highlight_style()),
-            Span::raw("  |  "),
-            Span::styled("Playing: ", theme.text_secondary_style()),
-            Span::styled("None", theme.text_style()),
-            Span::raw("  |  "),
-            Span::styled("Last sync: ", theme.text_secondary_style()),
-            Span::styled("Never", theme.text_style()),
-        ]),
-    ])
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border_color()))
-                .title("Info"),
-        )
-        .style(theme.text_style());
+fn render_library_info(
+    frame: &mut Frame,
+    area: Rect,
+    _state: &AppState,
+    theme: &crate::theme::Theme,
+) {
+    let info = Paragraph::new(vec![Line::from(vec![
+        Span::styled("Total: ", theme.text_secondary_style()),
+        Span::styled("8 books", theme.highlight_style()),
+        Span::raw("  |  "),
+        Span::styled("Playing: ", theme.text_secondary_style()),
+        Span::styled("None", theme.text_style()),
+        Span::raw("  |  "),
+        Span::styled("Last sync: ", theme.text_secondary_style()),
+        Span::styled("Never", theme.text_style()),
+    ])])
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border_color()))
+            .title("Info"),
+    )
+    .style(theme.text_style());
 
     frame.render_widget(info, area);
 }

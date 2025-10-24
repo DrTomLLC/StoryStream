@@ -4,6 +4,7 @@ use crate::error::{LibraryError, Result};
 use crate::import::{BookImporter, ImportOptions};
 use crate::scanner::LibraryScanner;
 pub use crate::LibraryConfig;
+use log::info;
 use std::path::Path;
 use storystream_core::{Book, BookId, Duration};
 use storystream_database::{
@@ -12,8 +13,7 @@ use storystream_database::{
     queries::books,
     search::search_books,
     DbPool,
-};
-use log::info;  // Changed from tracing::info
+}; // Changed from tracing::info
 
 /// High-level library management
 pub struct LibraryManager {
@@ -27,7 +27,10 @@ pub struct LibraryManager {
 impl LibraryManager {
     /// Create a new library manager
     pub async fn new(config: LibraryConfig) -> Result<Self> {
-        info!("Initializing library with database: {}", config.database_path);
+        info!(
+            "Initializing library with database: {}",
+            config.database_path
+        );
 
         // Connect to database
         let db_config = DatabaseConfig::new(&config.database_path);
@@ -133,9 +136,8 @@ impl LibraryManager {
         let books = self.list_books().await?;
 
         let total_books = books.len();
-        let total_duration = Duration::from_millis(
-            books.iter().map(|b| b.duration.as_millis()).sum()
-        );
+        let total_duration =
+            Duration::from_millis(books.iter().map(|b| b.duration.as_millis()).sum());
         let total_size = books.iter().map(|b| b.file_size).sum();
         let favorite_count = books.iter().filter(|b| b.is_favorite).count();
         let authors = books
@@ -190,10 +192,10 @@ mod tests {
     use tempfile::NamedTempFile;
 
     async fn setup_test_manager() -> Result<(LibraryManager, NamedTempFile)> {
-        let temp_file = NamedTempFile::new()
-            .map_err(LibraryError::Io)?;
+        let temp_file = NamedTempFile::new().map_err(LibraryError::Io)?;
 
-        let db_path = temp_file.path()
+        let db_path = temp_file
+            .path()
             .to_str()
             .ok_or_else(|| LibraryError::InvalidFile("Invalid path encoding".to_string()))?;
 

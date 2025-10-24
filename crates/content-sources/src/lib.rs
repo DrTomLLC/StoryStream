@@ -1,14 +1,14 @@
 // FILE: crates/content-sources/src/lib.rs
 
-mod local;
-mod librivox;
 mod archive;
+mod librivox;
+mod local;
 mod traits;
 
-use std::fmt;
+pub use archive::{ArchiveItem, ArchiveSource};
+pub use librivox::{LibriVoxBook, LibriVoxSource};
 pub use local::LocalSource;
-pub use librivox::{LibriVoxSource, LibriVoxBook};
-pub use archive::{ArchiveSource, ArchiveItem};
+use std::fmt;
 pub use traits::{ContentSource, SearchQuery, SearchResult, SourceMetadata};
 
 /// Result type for content source operations

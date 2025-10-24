@@ -291,7 +291,7 @@ pub fn generate_json_schema() -> String {
             }
         }
     })
-        .to_string()
+    .to_string()
 }
 
 /// Generates a config with all possible values set to demonstrate options

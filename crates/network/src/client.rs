@@ -70,12 +70,14 @@ impl Client {
 
     /// Performs a GET request
     pub async fn get(&self, url: &str) -> NetworkResult<Response> {
-        self.request(|| async { self.inner.get(url).send().await }).await
+        self.request(|| async { self.inner.get(url).send().await })
+            .await
     }
 
     /// Performs a HEAD request
     pub async fn head(&self, url: &str) -> NetworkResult<Response> {
-        self.request(|| async { self.inner.head(url).send().await }).await
+        self.request(|| async { self.inner.head(url).send().await })
+            .await
     }
 
     /// Gets the content length of a URL without downloading
@@ -102,7 +104,12 @@ impl Client {
 
         // Execute request with retry
         let mut attempts = 0;
-        let max_attempts = self.config.retry_policy.as_ref().map(|p| p.max_attempts()).unwrap_or(1);
+        let max_attempts = self
+            .config
+            .retry_policy
+            .as_ref()
+            .map(|p| p.max_attempts())
+            .unwrap_or(1);
 
         loop {
             attempts += 1;
@@ -119,7 +126,11 @@ impl Client {
                         return Ok(response);
                     } else {
                         let status = response.status();
-                        let error = NetworkError::Custom(format!("HTTP {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")));
+                        let error = NetworkError::Custom(format!(
+                            "HTTP {}: {}",
+                            status.as_u16(),
+                            status.canonical_reason().unwrap_or("Unknown")
+                        ));
 
                         // Don't retry client errors (4xx)
                         if status.is_client_error() {

@@ -15,11 +15,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::th
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),  // Title/Artist
-            Constraint::Length(3),  // Progress bar
-            Constraint::Length(5),  // Time info
-            Constraint::Length(7),  // Controls
-            Constraint::Min(0),     // Chapter info
+            Constraint::Length(5), // Title/Artist
+            Constraint::Length(3), // Progress bar
+            Constraint::Length(5), // Time info
+            Constraint::Length(7), // Controls
+            Constraint::Min(0),    // Chapter info
         ])
         .split(area);
 
@@ -31,7 +31,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::th
 }
 
 /// Renders now playing information
-fn render_now_playing(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::theme::Theme) {
+fn render_now_playing(
+    frame: &mut Frame,
+    area: Rect,
+    state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     let title = if let Some(ref file) = state.playback.current_file {
         file.clone()
     } else {
@@ -118,10 +123,16 @@ fn render_controls(frame: &mut Frame, area: Rect, state: &AppState, theme: &crat
         Line::from(""),
         Line::from(vec![
             Span::styled("Speed: ", theme.text_secondary_style()),
-            Span::styled(format!("{:.1}x", state.playback.speed), theme.highlight_style()),
+            Span::styled(
+                format!("{:.1}x", state.playback.speed),
+                theme.highlight_style(),
+            ),
             Span::raw("  |  "),
             Span::styled("Volume: ", theme.text_secondary_style()),
-            Span::styled(format!("{}%", (state.playback.volume * 100.0) as u8), theme.highlight_style()),
+            Span::styled(
+                format!("{}%", (state.playback.volume * 100.0) as u8),
+                theme.highlight_style(),
+            ),
         ]),
         Line::from(""),
         Line::from(Span::styled(
@@ -143,7 +154,12 @@ fn render_controls(frame: &mut Frame, area: Rect, state: &AppState, theme: &crat
 }
 
 /// Renders chapter information
-fn render_chapter_info(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::theme::Theme) {
+fn render_chapter_info(
+    frame: &mut Frame,
+    area: Rect,
+    state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     let chapter_info = if let Some(ch) = state.playback.chapter {
         format!("Chapter {} of ?", ch + 1)
     } else {
@@ -151,23 +167,20 @@ fn render_chapter_info(frame: &mut Frame, area: Rect, state: &AppState, theme: &
     };
 
     let paragraph = Paragraph::new(vec![
-        Line::from(Span::styled(
-            chapter_info,
-            theme.accent_style(),
-        )),
+        Line::from(Span::styled(chapter_info, theme.accent_style())),
         Line::from(""),
         Line::from(Span::styled(
             "n: Next Chapter | p: Previous Chapter",
             theme.text_secondary_style(),
         )),
     ])
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(theme.border_color()))
-                .title("Chapters"),
-        )
-        .alignment(Alignment::Center);
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border_color()))
+            .title("Chapters"),
+    )
+    .alignment(Alignment::Center);
 
     frame.render_widget(paragraph, area);
 }

@@ -4,9 +4,9 @@
 use crate::state::AppState;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::Style,
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem},
     Frame,
 };
 
@@ -22,7 +22,12 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::th
 }
 
 /// Renders the playlist list
-fn render_playlist_list(frame: &mut Frame, area: Rect, state: &AppState, theme: &crate::theme::Theme) {
+fn render_playlist_list(
+    frame: &mut Frame,
+    area: Rect,
+    state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     let playlists = vec![
         ("🎵 Recently Played", "8 books"),
         ("⭐ Favorites", "12 books"),
@@ -65,7 +70,12 @@ fn render_playlist_list(frame: &mut Frame, area: Rect, state: &AppState, theme: 
 }
 
 /// Renders playlist items
-fn render_playlist_items(frame: &mut Frame, area: Rect, _state: &AppState, theme: &crate::theme::Theme) {
+fn render_playlist_items(
+    frame: &mut Frame,
+    area: Rect,
+    _state: &AppState,
+    theme: &crate::theme::Theme,
+) {
     let books = vec![
         "📖 Moby Dick",
         "📖 Pride and Prejudice",

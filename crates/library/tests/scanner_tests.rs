@@ -1,10 +1,10 @@
 // FILE: crates/library/tests/scanner_tests.rs
 //! Comprehensive integration tests for LibraryScanner
 
-use storystream_library::{LibraryError, LibraryScanner};
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;
+use storystream_library::{LibraryError, LibraryScanner};
 use tempfile::TempDir;
 
 type Result<T> = std::result::Result<T, LibraryError>;

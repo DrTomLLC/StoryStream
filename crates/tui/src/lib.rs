@@ -7,7 +7,7 @@ mod events;
 mod plugins;
 mod state;
 mod theme;
-pub mod ui;  // CHANGED: Made public
+pub mod ui; // CHANGED: Made public
 
 pub use app::App;
 pub use error::{TuiError, TuiResult};

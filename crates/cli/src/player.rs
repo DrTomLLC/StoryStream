@@ -1,15 +1,15 @@
 use anyhow::{Context, Result};
 use console::{style, Key, Term};
-use storystream_core::{Book, Duration as CoreDuration};
-use storystream_database::{
-    connection::{connect, DatabaseConfig},
-    queries::playback::{create_playback_state, get_playback_state, update_playback_state},
-    queries::chapters::get_book_chapters,
-    DbPool,
-};
 use media_engine::{MediaEngine, Speed};
 use std::sync::Arc;
 use std::time::Duration as StdDuration;
+use storystream_core::{Book, Duration as CoreDuration};
+use storystream_database::{
+    connection::{connect, DatabaseConfig},
+    queries::chapters::get_book_chapters,
+    queries::playback::{create_playback_state, get_playback_state, update_playback_state},
+    DbPool,
+};
 use tokio::sync::Mutex;
 use tokio::time::interval;
 
@@ -36,7 +36,9 @@ pub async fn start_playback(_db_path: &str, book: Book) -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to create media engine: {}", e))?;
 
     // Convert PathBuf to str safely
-    let file_path = book.file_path.to_str()
+    let file_path = book
+        .file_path
+        .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid file path"))?;
 
     engine
@@ -79,7 +81,8 @@ pub async fn start_playback(_db_path: &str, book: Book) -> Result<()> {
     let _ = engine.set_volume(db_state.volume as f32 / 100.0);
 
     // Start playback
-    engine.play()
+    engine
+        .play()
         .map_err(|e| anyhow::anyhow!("Failed to start playback: {}", e))?;
 
     // Run the player UI
@@ -343,7 +346,8 @@ fn draw_player_ui(
     // Chapter info if available - check if chapter_progress returns Some
     if let Some(progress) = engine.chapter_progress() {
         let chapter_info = format!("  Chapter Progress: {:.1}%", progress);
-        term.write_line(&chapter_info).context("Failed to write chapter info")?;
+        term.write_line(&chapter_info)
+            .context("Failed to write chapter info")?;
     }
 
     // Get current position from engine (real-time)

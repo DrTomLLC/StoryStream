@@ -79,10 +79,7 @@ impl QualityTier {
 
     /// Returns true if this tier represents audiophile quality
     pub fn is_audiophile(&self) -> bool {
-        matches!(
-            self,
-            Self::HiRes96 | Self::HiRes192 | Self::Studio
-        )
+        matches!(self, Self::HiRes96 | Self::HiRes192 | Self::Studio)
     }
 
     /// Returns true if this is considered high fidelity
@@ -286,8 +283,7 @@ mod tests {
 
     #[test]
     fn test_quality_report() {
-        let quality = AudioQuality::new(96_000, 24, true, false, None)
-            .with_dynamic_range(14.2);
+        let quality = AudioQuality::new(96_000, 24, true, false, None).with_dynamic_range(14.2);
 
         let report = quality.report();
         assert!(report.contains("Hi-Res"));

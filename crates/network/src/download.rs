@@ -84,7 +84,9 @@ mod tests {
 
         // Test with a small, reliable URL
         // Note: This test might fail in CI/offline environments
-        let result = manager.download_bytes("https://www.rust-lang.org/robots.txt").await;
+        let result = manager
+            .download_bytes("https://www.rust-lang.org/robots.txt")
+            .await;
 
         // Just verify it doesn't panic
         let _ = result;

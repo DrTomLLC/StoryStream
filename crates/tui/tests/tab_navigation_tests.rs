@@ -1,8 +1,8 @@
 // crates/tui/tests/tab_navigation_tests.rs
 //! Integration tests for tab navigation and state preservation
 
-use storystream_tui::{App, AppState, PlaybackState, View};
 use std::time::Duration;
+use storystream_tui::{App, AppState, PlaybackState, View};
 
 #[test]
 fn test_basic_view_state_preservation() {
@@ -179,7 +179,7 @@ fn test_no_cursor_jump_on_rapid_tab_switches() {
         app.cycle_view(); // Away from Library
         app.cycle_view(); // Further away
         app.cycle_view(); // Even further
-        // Jump back to Library
+                          // Jump back to Library
         app.state.set_view(View::Library);
         // Position should still be 7
         assert_eq!(app.state.selected_item, 7);

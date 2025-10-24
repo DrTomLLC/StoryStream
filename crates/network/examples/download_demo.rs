@@ -43,7 +43,10 @@ async fn main() {
     println!("3. Downloading small file to memory...");
     let manager = DownloadManager::new(client);
 
-    match manager.download_string("https://www.rust-lang.org/robots.txt").await {
+    match manager
+        .download_string("https://www.rust-lang.org/robots.txt")
+        .await
+    {
         Ok(content) => {
             let lines: Vec<&str> = content.lines().take(3).collect();
             println!("   ✓ Downloaded {} bytes", content.len());

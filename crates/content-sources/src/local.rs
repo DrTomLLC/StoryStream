@@ -90,10 +90,7 @@ mod tests {
         );
         assert!(source.is_available());
 
-        let source = LocalSource::with_path(
-            "Test".to_string(),
-            PathBuf::from("/nonexistent/path"),
-        );
+        let source = LocalSource::with_path("Test".to_string(), PathBuf::from("/nonexistent/path"));
         assert!(!source.is_available());
     }
 }

@@ -69,15 +69,16 @@ pub fn migrate_to_latest(config: Config) -> ConfigResult<Config> {
 
     // Update version number
     if let Some(table) = value.as_table_mut() {
-        table.insert("version".to_string(), toml::Value::Integer(CONFIG_VERSION as i64));
+        table.insert(
+            "version".to_string(),
+            toml::Value::Integer(CONFIG_VERSION as i64),
+        );
     }
 
     // Convert back to Config
-    let migrated: Config = toml::from_str(
-        &toml::to_string(&value)
-            .map_err(ConfigError::SerializeError)?
-    )
-        .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+    let migrated: Config =
+        toml::from_str(&toml::to_string(&value).map_err(ConfigError::SerializeError)?)
+            .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
 
     Ok(migrated)
 }

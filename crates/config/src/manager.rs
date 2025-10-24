@@ -114,7 +114,10 @@ impl ConfigManager {
     /// Returns Ok(true) if a new file was created, Ok(false) if one already exists.
     pub fn initialize(&self) -> ConfigResult<bool> {
         if self.config_path().exists() {
-            log::info!("Config file already exists at {}", self.config_path().display());
+            log::info!(
+                "Config file already exists at {}",
+                self.config_path().display()
+            );
             return Ok(false);
         }
 
@@ -295,7 +298,9 @@ mod tests {
 
         let mut config = Config::default();
         config.player.default_volume = 150; // Invalid
-        manager.save(&config).expect_err("Should not save invalid config");
+        manager
+            .save(&config)
+            .expect_err("Should not save invalid config");
     }
 
     #[test]

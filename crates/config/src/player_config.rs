@@ -62,12 +62,7 @@ impl ConfigSection for PlayerConfig {
                 300,
                 "player.autosave_interval_secs",
             ),
-            Validator::in_range(
-                self.resume_rewind_secs,
-                0,
-                60,
-                "player.resume_rewind_secs",
-            ),
+            Validator::in_range(self.resume_rewind_secs, 0, 60, "player.resume_rewind_secs"),
             Validator::in_range(self.ui_refresh_ms, 16, 1000, "player.ui_refresh_ms"),
             Validator::in_range(self.volume_step, 1, 50, "player.volume_step"),
             Validator::in_range(self.speed_step, 0.05, 0.5, "player.speed_step"),

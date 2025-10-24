@@ -2,7 +2,9 @@ use crate::chapters::ChapterList;
 use crate::decoder::AudioDecoder;
 use crate::equalizer::Equalizer;
 use crate::playback::{PlaybackState, PlaybackStatus};
-use crate::playback_thread::{self, PlaybackCommand, AudioDecoder as PlaybackAudioDecoder, Equalizer as PlaybackEqualizer};
+use crate::playback_thread::{
+    self, AudioDecoder as PlaybackAudioDecoder, Equalizer as PlaybackEqualizer, PlaybackCommand,
+};
 use crate::speed::Speed;
 use std::path::Path;
 use std::sync::mpsc::{channel, Sender};
@@ -119,7 +121,9 @@ impl MediaEngine {
             return Err("No file loaded".to_string());
         }
 
-        let tx = self.command_tx.lock()
+        let tx = self
+            .command_tx
+            .lock()
             .map_err(|_| "Failed to acquire command lock")?
             .as_ref()
             .ok_or("Playback thread not running")?
@@ -145,7 +149,9 @@ impl MediaEngine {
             return Err("No file loaded".to_string());
         }
 
-        let tx = self.command_tx.lock()
+        let tx = self
+            .command_tx
+            .lock()
             .map_err(|_| "Failed to acquire command lock")?
             .as_ref()
             .ok_or("Playback thread not running")?
@@ -195,13 +201,16 @@ impl MediaEngine {
             return Err("No file loaded".to_string());
         }
 
-        let tx = self.command_tx.lock()
+        let tx = self
+            .command_tx
+            .lock()
             .map_err(|_| "Failed to acquire command lock")?
             .as_ref()
             .ok_or("Playback thread not running")?
             .clone();
 
-        tx.send(PlaybackCommand::Seek(position)).map_err(|e| e.to_string())?;
+        tx.send(PlaybackCommand::Seek(position))
+            .map_err(|e| e.to_string())?;
 
         if let Ok(mut pos) = self.current_position.lock() {
             *pos = position;
@@ -259,35 +268,37 @@ impl MediaEngine {
 
     /// Returns the current playback position
     pub fn position(&self) -> Duration {
-        self.current_position.lock()
+        self.current_position
+            .lock()
             .map(|pos| *pos)
             .unwrap_or_else(|_| Duration::from_secs(0))
     }
 
     /// Returns whether playback is currently active
     pub fn is_playing(&self) -> bool {
-        self.current_status.lock()
+        self.current_status
+            .lock()
             .map(|status| *status)
             .unwrap_or(false)
     }
 
     /// Returns the playback status
     pub fn status(&self) -> bool {
-        self.current_status.lock()
+        self.current_status
+            .lock()
             .map(|status| *status)
             .unwrap_or(false)
     }
 
     /// Returns the current volume
     pub fn volume(&self) -> f32 {
-        self.volume.lock()
-            .map(|vol| *vol)
-            .unwrap_or(1.0)
+        self.volume.lock().map(|vol| *vol).unwrap_or(1.0)
     }
 
     /// Returns the current playback state
     pub fn get_playback_state(&self) -> PlaybackState {
-        self.playback_state.lock()
+        self.playback_state
+            .lock()
             .map(|state| state.clone())
             .unwrap_or_else(|_| PlaybackState::new())
     }
@@ -300,7 +311,8 @@ impl MediaEngine {
 
     /// Returns the list of chapters
     pub fn chapters(&self) -> ChapterList {
-        self.chapters.lock()
+        self.chapters
+            .lock()
             .map(|chapters| chapters.clone())
             .unwrap_or_else(|_| ChapterList::new())
     }
@@ -511,8 +523,16 @@ mod engine_tests {
     fn test_load_chapters() {
         if let Ok(mut engine) = MediaEngine::with_defaults() {
             let chapters = vec![
-                ("Chapter 1".to_string(), Duration::from_secs(0), Duration::from_secs(60)),
-                ("Chapter 2".to_string(), Duration::from_secs(60), Duration::from_secs(120)),
+                (
+                    "Chapter 1".to_string(),
+                    Duration::from_secs(0),
+                    Duration::from_secs(60),
+                ),
+                (
+                    "Chapter 2".to_string(),
+                    Duration::from_secs(60),
+                    Duration::from_secs(120),
+                ),
             ];
             engine.load_chapters(chapters);
             // Chapter loading not yet implemented, just verify it doesn't panic

@@ -110,14 +110,8 @@ mod integration_tests {
         let manager = HandleManager::<String>::default();
 
         // Test invalid handle retrieval
-        assert!(matches!(
-            manager.get(0),
-            Err(FfiError::InvalidHandle(_))
-        ));
-        assert!(matches!(
-            manager.get(-1),
-            Err(FfiError::InvalidHandle(_))
-        ));
+        assert!(matches!(manager.get(0), Err(FfiError::InvalidHandle(_))));
+        assert!(matches!(manager.get(-1), Err(FfiError::InvalidHandle(_))));
         assert!(matches!(
             manager.get(999999),
             Err(FfiError::InvalidHandle(_))

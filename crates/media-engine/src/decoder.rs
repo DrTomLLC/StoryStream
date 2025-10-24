@@ -24,9 +24,8 @@ pub struct DecodedAudio {
 
 impl AudioDecoder {
     pub fn new(path: &Path) -> EngineResult<Self> {
-        let file = std::fs::File::open(path).map_err(|e| {
-            EngineError::DecodeError(format!("Failed to open file: {}", e))
-        })?;
+        let file = std::fs::File::open(path)
+            .map_err(|e| EngineError::DecodeError(format!("Failed to open file: {}", e)))?;
 
         let mss = MediaSourceStream::new(Box::new(file), Default::default());
 
@@ -36,10 +35,13 @@ impl AudioDecoder {
         }
 
         let probed = symphonia::default::get_probe()
-            .format(&hint, mss, &FormatOptions::default(), &MetadataOptions::default())
-            .map_err(|e| {
-                EngineError::DecodeError(format!("Failed to probe format: {}", e))
-            })?;
+            .format(
+                &hint,
+                mss,
+                &FormatOptions::default(),
+                &MetadataOptions::default(),
+            )
+            .map_err(|e| EngineError::DecodeError(format!("Failed to probe format: {}", e)))?;
 
         let reader = probed.format;
 
@@ -52,9 +54,7 @@ impl AudioDecoder {
 
         let decoder = symphonia::default::get_codecs()
             .make(&codec_params, &DecoderOptions::default())
-            .map_err(|e| {
-                EngineError::DecodeError(format!("Failed to create decoder: {}", e))
-            })?;
+            .map_err(|e| EngineError::DecodeError(format!("Failed to create decoder: {}", e)))?;
 
         let spec = SignalSpec::new(
             codec_params.sample_rate.unwrap_or(44100),
@@ -73,7 +73,9 @@ impl AudioDecoder {
         loop {
             let packet = match self.reader.next_packet() {
                 Ok(packet) => packet,
-                Err(SymphoniaError::IoError(e)) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                Err(SymphoniaError::IoError(e))
+                    if e.kind() == std::io::ErrorKind::UnexpectedEof =>
+                {
                     return Ok(None);
                 }
                 Err(e) => {
@@ -118,7 +120,13 @@ impl AudioDecoder {
         let timestamp = (time_secs * sample_rate as f64) as u64;
 
         self.reader
-            .seek(SeekMode::Accurate, SeekTo::TimeStamp { ts: timestamp, track_id: self.track_id })
+            .seek(
+                SeekMode::Accurate,
+                SeekTo::TimeStamp {
+                    ts: timestamp,
+                    track_id: self.track_id,
+                },
+            )
             .map_err(|e| EngineError::SeekError(format!("Failed to seek: {}", e)))?;
 
         self.decoder.reset();

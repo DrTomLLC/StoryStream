@@ -18,7 +18,12 @@ pub trait Plugin: Send + Sync {
     fn render(&self, frame: &mut Frame, area: Rect, state: &AppState);
 
     /// Handles key events
-    fn handle_key(&mut self, code: KeyCode, modifiers: KeyModifiers, state: &mut AppState) -> TuiResult<()>;
+    fn handle_key(
+        &mut self,
+        code: KeyCode,
+        modifiers: KeyModifiers,
+        state: &mut AppState,
+    ) -> TuiResult<()>;
 
     /// Called when the view becomes active
     fn on_activate(&mut self, _state: &mut AppState) -> TuiResult<()> {
@@ -120,7 +125,12 @@ mod tests {
 
         fn render(&self, _frame: &mut Frame, _area: Rect, _state: &AppState) {}
 
-        fn handle_key(&mut self, _code: KeyCode, _modifiers: KeyModifiers, _state: &mut AppState) -> TuiResult<()> {
+        fn handle_key(
+            &mut self,
+            _code: KeyCode,
+            _modifiers: KeyModifiers,
+            _state: &mut AppState,
+        ) -> TuiResult<()> {
             Ok(())
         }
     }

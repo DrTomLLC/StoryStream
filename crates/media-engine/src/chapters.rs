@@ -71,7 +71,8 @@ impl ChapterList {
     /// Adds a chapter
     pub fn add_chapter(&mut self, chapter: ChapterMarker) {
         self.chapters.push(chapter);
-        self.chapters.sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
+        self.chapters
+            .sort_by(|a, b| a.start_time.partial_cmp(&b.start_time).unwrap());
 
         if self.current_index.is_none() && !self.chapters.is_empty() {
             self.current_index = Some(0);
@@ -123,8 +124,13 @@ impl ChapterList {
 
     /// Gets the previous chapter, if any
     pub fn previous_chapter(&self) -> Option<&ChapterMarker> {
-        self.current_index
-            .and_then(|idx| if idx > 0 { self.chapters.get(idx - 1) } else { None })
+        self.current_index.and_then(|idx| {
+            if idx > 0 {
+                self.chapters.get(idx - 1)
+            } else {
+                None
+            }
+        })
     }
 
     /// Moves to the next chapter, returning its start time

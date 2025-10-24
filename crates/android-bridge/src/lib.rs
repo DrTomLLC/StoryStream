@@ -48,12 +48,12 @@ pub fn init_logging() {
 #[cfg(target_os = "android")]
 #[no_mangle]
 #[allow(non_snake_case)]
-pub extern "C" fn JNI_OnLoad(
-    _vm: jni::JavaVM,
-    _reserved: *mut std::ffi::c_void,
-) -> jni::sys::jint {
+pub extern "C" fn JNI_OnLoad(_vm: jni::JavaVM, _reserved: *mut std::ffi::c_void) -> jni::sys::jint {
     init_logging();
-    crate::ffi::log_info("StoryStream", &format!("Library loaded - version {}", VERSION));
+    crate::ffi::log_info(
+        "StoryStream",
+        &format!("Library loaded - version {}", VERSION),
+    );
     jni::JNIVersion::V6.into()
 }
 
@@ -75,10 +75,14 @@ pub extern "C" fn Java_com_storystream_StoryStream_nativeGetVersion(
 /// Platform detection for build warnings
 #[cfg(not(target_os = "android"))]
 fn emit_warning() {
-    println!("cargo:warning=Building for non-Android target: {} ({})",
-             std::env::consts::OS,
-             std::env::consts::ARCH);
-    println!("cargo:warning=JNI functions will be available but may not work correctly outside Android");
+    println!(
+        "cargo:warning=Building for non-Android target: {} ({})",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+    println!(
+        "cargo:warning=JNI functions will be available but may not work correctly outside Android"
+    );
 }
 
 #[cfg(test)]

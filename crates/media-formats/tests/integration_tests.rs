@@ -1,7 +1,7 @@
 // FILE: crates/media-formats/tests/integration_tests.rs
 
-use storystream_media_formats::prelude::*;
 use std::path::PathBuf;
+use storystream_media_formats::prelude::*;
 
 #[test]
 fn test_format_detection_from_extension() {
@@ -45,7 +45,11 @@ fn test_audio_quality_scoring() {
 #[test]
 fn test_audio_analyzer_creation() {
     let result = AudioAnalyzer::new();
-    assert!(result.is_ok(), "Failed to create analyzer: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Failed to create analyzer: {:?}",
+        result.err()
+    );
 }
 
 #[test]
@@ -111,8 +115,7 @@ fn test_format_capabilities() {
 
 #[test]
 fn test_quality_report_generation() {
-    let quality = AudioQuality::new(96_000, 24, true, false, None)
-        .with_dynamic_range(14.5);
+    let quality = AudioQuality::new(96_000, 24, true, false, None).with_dynamic_range(14.5);
 
     let report = quality.report();
 

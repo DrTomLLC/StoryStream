@@ -1,8 +1,8 @@
 //! Edge case and error scenario tests
 
-use storystream_config::{Config, ConfigManager};
 use std::fs;
 use std::path::PathBuf;
+use storystream_config::{Config, ConfigManager};
 use tempfile::TempDir;
 
 fn setup_test_manager() -> Result<(TempDir, ConfigManager), Box<dyn std::error::Error>> {
@@ -156,10 +156,7 @@ fn test_unicode_in_extensions() {
 fn test_whitespace_in_extensions() {
     let mut config = Config::default();
 
-    config.library.supported_extensions = vec![
-        " mp3 ".to_string(),
-        "  m4a  ".to_string(),
-    ];
+    config.library.supported_extensions = vec![" mp3 ".to_string(), "  m4a  ".to_string()];
 
     config.library.supported_extensions.push("   ".to_string());
     let result = config.validate();

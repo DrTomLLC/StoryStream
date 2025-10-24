@@ -87,10 +87,7 @@ fn test_parse_atom_feed() {
 
     assert_eq!(feed.feed_type, FeedType::Atom);
     assert_eq!(feed.title, "Atom Audiobook Feed");
-    assert_eq!(
-        feed.description,
-        Some("Books in Atom format".to_string())
-    );
+    assert_eq!(feed.description, Some("Books in Atom format".to_string()));
     assert_eq!(feed.item_count(), 2);
 
     let item1 = &feed.items[0];
@@ -235,17 +232,13 @@ fn test_feed_with_special_characters() {
 
     // Verify the full expected string
     assert_eq!(
-        feed.title,
-        "Feed with & Special <Characters>",
+        feed.title, "Feed with & Special <Characters>",
         "Feed title should have all XML entities decoded"
     );
 
     // Check item title too
     assert!(feed.items[0].title.contains('&'));
-    assert_eq!(
-        feed.items[0].title,
-        "Episode with \"Quotes\" & Symbols"
-    );
+    assert_eq!(feed.items[0].title, "Episode with \"Quotes\" & Symbols");
 }
 
 #[test]
@@ -354,5 +347,9 @@ fn test_large_feed_performance() {
     let duration = start.elapsed();
 
     assert_eq!(feed.item_count(), 1000);
-    assert!(duration.as_millis() < 100, "Parsing took too long: {:?}", duration);
+    assert!(
+        duration.as_millis() < 100,
+        "Parsing took too long: {:?}",
+        duration
+    );
 }

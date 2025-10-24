@@ -188,7 +188,10 @@ pub enum AppError {
 
     /// Content not found at source
     #[error("Content not found: {identifier} at {provider}")]
-    ContentNotFound { identifier: String, provider: String },
+    ContentNotFound {
+        identifier: String,
+        provider: String,
+    },
 
     // ===== Configuration/Settings Errors =====
     /// Invalid configuration
@@ -312,9 +315,9 @@ impl AppError {
             }
 
             // User intervention required
-            Self::DiskFull { .. }
-            | Self::PermissionDenied { .. }
-            | Self::SyncAuthFailed { .. } => RecoveryAction::UserIntervention,
+            Self::DiskFull { .. } | Self::PermissionDenied { .. } | Self::SyncAuthFailed { .. } => {
+                RecoveryAction::UserIntervention
+            }
 
             // Default to user intervention for safety
             _ => RecoveryAction::UserIntervention,
@@ -435,7 +438,10 @@ impl AppError {
     }
 
     /// Helper to create a network error from any error type
-    pub fn network<E: std::error::Error + Send + Sync + 'static>(message: impl Into<String>, source: E) -> Self {
+    pub fn network<E: std::error::Error + Send + Sync + 'static>(
+        message: impl Into<String>,
+        source: E,
+    ) -> Self {
         Self::NetworkError {
             message: message.into(),
             source: Some(Box::new(source)),
@@ -443,7 +449,10 @@ impl AppError {
     }
 
     /// Helper to create a database error from any error type
-    pub fn database<E: std::error::Error + Send + Sync + 'static>(message: impl Into<String>, source: E) -> Self {
+    pub fn database<E: std::error::Error + Send + Sync + 'static>(
+        message: impl Into<String>,
+        source: E,
+    ) -> Self {
         Self::DatabaseError {
             message: message.into(),
             source: Some(Box::new(source)),
@@ -451,7 +460,10 @@ impl AppError {
     }
 
     /// Helper to create an audio decode error from any error type
-    pub fn audio_decode<E: std::error::Error + Send + Sync + 'static>(message: impl Into<String>, source: E) -> Self {
+    pub fn audio_decode<E: std::error::Error + Send + Sync + 'static>(
+        message: impl Into<String>,
+        source: E,
+    ) -> Self {
         Self::AudioDecodeError {
             message: message.into(),
             source: Some(Box::new(source)),
@@ -496,10 +508,22 @@ mod tests {
             RecoveryAction::RetryWithBackoff.to_string(),
             "Retrying with backoff"
         );
-        assert_eq!(RecoveryAction::DisableFeature.to_string(), "Disabling feature");
-        assert_eq!(RecoveryAction::RepairDatabase.to_string(), "Repairing database");
-        assert_eq!(RecoveryAction::RestoreBackup.to_string(), "Restoring from backup");
-        assert_eq!(RecoveryAction::SafeShutdown.to_string(), "Performing safe shutdown");
+        assert_eq!(
+            RecoveryAction::DisableFeature.to_string(),
+            "Disabling feature"
+        );
+        assert_eq!(
+            RecoveryAction::RepairDatabase.to_string(),
+            "Repairing database"
+        );
+        assert_eq!(
+            RecoveryAction::RestoreBackup.to_string(),
+            "Restoring from backup"
+        );
+        assert_eq!(
+            RecoveryAction::SafeShutdown.to_string(),
+            "Performing safe shutdown"
+        );
         assert_eq!(
             RecoveryAction::UserIntervention.to_string(),
             "User intervention required"

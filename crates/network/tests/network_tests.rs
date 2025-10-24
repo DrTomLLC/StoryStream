@@ -1,8 +1,10 @@
 // crates/network/tests/network_tests.rs
 //! Integration tests for network module
 
-use storystream_network::{Client, ClientConfig, ConnectivityChecker, DownloadManager, ProgressTracker};
 use std::time::Duration;
+use storystream_network::{
+    Client, ClientConfig, ConnectivityChecker, DownloadManager, ProgressTracker,
+};
 
 #[tokio::test]
 async fn test_client_basic_operations() {
@@ -97,7 +99,9 @@ fn test_progress_tracker_thread_safety() {
 
     std::thread::spawn(move || {
         tracker_clone.update(5000);
-    }).join().expect("Thread panicked");
+    })
+    .join()
+    .expect("Thread panicked");
 
     // Wait a bit for thread to complete
     std::thread::sleep(Duration::from_millis(10));

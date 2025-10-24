@@ -68,21 +68,25 @@ pub async fn delete_playlist(pool: &DbPool, id: PlaylistId) -> Result<(), AppErr
 /// Adds a book to a playlist
 pub async fn add_book_to_playlist(pool: &DbPool, item: &PlaylistItem) -> Result<(), AppError> {
     sqlx::query(
-        "INSERT INTO playlist_items (playlist_id, book_id, position, added_at) VALUES (?, ?, ?, ?)"
+        "INSERT INTO playlist_items (playlist_id, book_id, position, added_at) VALUES (?, ?, ?, ?)",
     )
-        .bind(item.playlist_id.as_string())
-        .bind(item.book_id.as_string())
-        .bind(item.position as i64)
-        .bind(item.added_at.as_millis())
-        .execute(pool)
-        .await
-        .map_err(|e| AppError::database("Failed to add book to playlist", e))?;
+    .bind(item.playlist_id.as_string())
+    .bind(item.book_id.as_string())
+    .bind(item.position as i64)
+    .bind(item.added_at.as_millis())
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::database("Failed to add book to playlist", e))?;
 
     Ok(())
 }
 
 /// Removes a book from a playlist
-pub async fn remove_book_from_playlist(pool: &DbPool, playlist_id: PlaylistId, book_id: BookId) -> Result<(), AppError> {
+pub async fn remove_book_from_playlist(
+    pool: &DbPool,
+    playlist_id: PlaylistId,
+    book_id: BookId,
+) -> Result<(), AppError> {
     sqlx::query("DELETE FROM playlist_items WHERE playlist_id = ? AND book_id = ?")
         .bind(playlist_id.as_string())
         .bind(book_id.as_string())
@@ -94,7 +98,10 @@ pub async fn remove_book_from_playlist(pool: &DbPool, playlist_id: PlaylistId, b
 }
 
 /// Gets all books in a playlist
-pub async fn get_playlist_books(pool: &DbPool, playlist_id: PlaylistId) -> Result<Vec<storystream_core::Book>, AppError> {
+pub async fn get_playlist_books(
+    pool: &DbPool,
+    playlist_id: PlaylistId,
+) -> Result<Vec<storystream_core::Book>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT b.id, b.title, b.author, b.narrator, b.series, b.series_position,
@@ -112,31 +119,39 @@ pub async fn get_playlist_books(pool: &DbPool, playlist_id: PlaylistId) -> Resul
         .await
         .map_err(|e| AppError::database("Failed to get playlist books", e))?;
 
-    rows.into_iter().map(crate::queries::books::row_to_book).collect()
+    rows.into_iter()
+        .map(crate::queries::books::row_to_book)
+        .collect()
 }
 
 fn row_to_playlist(row: sqlx::sqlite::SqliteRow) -> Result<Playlist, AppError> {
     use sqlx::Row;
 
-    let id_str: String = row.try_get("id")
+    let id_str: String = row
+        .try_get("id")
         .map_err(|e| AppError::database("Missing playlist ID", e))?;
     let id = PlaylistId::from_string(&id_str)
         .map_err(|e| AppError::database("Invalid playlist ID", e))?;
 
-    let playlist_type_str: String = row.try_get("playlist_type")
+    let playlist_type_str: String = row
+        .try_get("playlist_type")
         .map_err(|e| AppError::database("Missing playlist type", e))?;
     let playlist_type = match playlist_type_str.as_str() {
         "Manual" => storystream_core::PlaylistType::Manual,
         "Smart" => storystream_core::PlaylistType::Smart,
-        _ => return Err(AppError::InvalidArgument {
-            argument: "playlist_type".to_string(),
-            reason: "Invalid playlist type".to_string(),
-        }),
+        _ => {
+            return Err(AppError::InvalidArgument {
+                argument: "playlist_type".to_string(),
+                reason: "Invalid playlist type".to_string(),
+            })
+        }
     };
 
-    let created_at_ms: i64 = row.try_get("created_at")
+    let created_at_ms: i64 = row
+        .try_get("created_at")
         .map_err(|e| AppError::database("Missing created_at", e))?;
-    let updated_at_ms: i64 = row.try_get("updated_at")
+    let updated_at_ms: i64 = row
+        .try_get("updated_at")
         .map_err(|e| AppError::database("Missing updated_at", e))?;
 
     let criteria_json: Option<String> = row.try_get("smart_criteria").ok();
@@ -145,10 +160,11 @@ fn row_to_playlist(row: sqlx::sqlite::SqliteRow) -> Result<Playlist, AppError> {
         .map(|json| serde_json::from_str(&json))
         .transpose()
         .map_err(|e| AppError::database("Failed to deserialize criteria", e))?;
-    
+
     Ok(Playlist {
         id,
-        name: row.try_get("name")
+        name: row
+            .try_get("name")
             .map_err(|e| AppError::database("Missing name", e))?,
         description: row.try_get("description").ok(),
         playlist_type,
@@ -164,9 +180,9 @@ mod tests {
     use crate::connection::create_test_db;
     use crate::migrations::run_migrations;
     use crate::queries::books::create_book;
-    use storystream_core::{Book, Duration};
     use std::path::PathBuf;
     use storystream_core::types::PlaylistItem;
+    use storystream_core::{Book, Duration};
 
     async fn setup() -> DbPool {
         let pool = create_test_db().await.unwrap();

@@ -3,13 +3,8 @@
 // This module provides safe wrappers for JNI operations with panic handling
 // and type conversions between Rust and Java types.
 
-use jni::{
-    objects::{JClass, JString},
-    sys::jstring,
-    JNIEnv,
-};
-use std::ffi::CString;
-use std::panic; // Required for catch_unwind in jni_safe! macro
+use jni::{objects::JString, sys::jstring, JNIEnv};
+// Required for catch_unwind in jni_safe! macro
 
 /// FFI-safe error type that can cross the Rust/Java boundary
 #[derive(Debug)]
@@ -66,9 +61,7 @@ pub struct HandleManager<T> {
 impl<T> Default for HandleManager<T> {
     fn default() -> Self {
         Self {
-            handles: std::sync::Arc::new(std::sync::RwLock::new(
-                std::collections::HashMap::new(),
-            )),
+            handles: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             next_handle: std::sync::Arc::new(std::sync::atomic::AtomicI64::new(1)),
         }
     }

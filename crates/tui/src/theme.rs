@@ -163,17 +163,17 @@ impl Theme {
     fn solarized_dark() -> Self {
         Self {
             theme_type: ThemeType::SolarizedDark,
-            text: Color::Rgb(131, 148, 150),      // base0
+            text: Color::Rgb(131, 148, 150),          // base0
             text_secondary: Color::Rgb(88, 110, 117), // base01
-            background: Color::Rgb(0, 43, 54),    // base03
-            highlight: Color::Rgb(181, 137, 0),   // yellow
-            accent: Color::Rgb(38, 139, 210),     // blue
-            success: Color::Rgb(133, 153, 0),     // green
-            warning: Color::Rgb(181, 137, 0),     // yellow
-            error: Color::Rgb(220, 50, 47),       // red
-            border: Color::Rgb(7, 54, 66),        // base02
-            playing: Color::Rgb(133, 153, 0),     // green
-            paused: Color::Rgb(220, 50, 47),      // red
+            background: Color::Rgb(0, 43, 54),        // base03
+            highlight: Color::Rgb(181, 137, 0),       // yellow
+            accent: Color::Rgb(38, 139, 210),         // blue
+            success: Color::Rgb(133, 153, 0),         // green
+            warning: Color::Rgb(181, 137, 0),         // yellow
+            error: Color::Rgb(220, 50, 47),           // red
+            border: Color::Rgb(7, 54, 66),            // base02
+            playing: Color::Rgb(133, 153, 0),         // green
+            paused: Color::Rgb(220, 50, 47),          // red
         }
     }
 
@@ -181,17 +181,17 @@ impl Theme {
     fn solarized_light() -> Self {
         Self {
             theme_type: ThemeType::SolarizedLight,
-            text: Color::Rgb(101, 123, 131),      // base00
+            text: Color::Rgb(101, 123, 131),           // base00
             text_secondary: Color::Rgb(147, 161, 161), // base1
-            background: Color::Rgb(253, 246, 227), // base3
-            highlight: Color::Rgb(181, 137, 0),   // yellow
-            accent: Color::Rgb(38, 139, 210),     // blue
-            success: Color::Rgb(133, 153, 0),     // green
-            warning: Color::Rgb(181, 137, 0),     // yellow
-            error: Color::Rgb(220, 50, 47),       // red
-            border: Color::Rgb(238, 232, 213),    // base2
-            playing: Color::Rgb(133, 153, 0),     // green
-            paused: Color::Rgb(220, 50, 47),      // red
+            background: Color::Rgb(253, 246, 227),     // base3
+            highlight: Color::Rgb(181, 137, 0),        // yellow
+            accent: Color::Rgb(38, 139, 210),          // blue
+            success: Color::Rgb(133, 153, 0),          // green
+            warning: Color::Rgb(181, 137, 0),          // yellow
+            error: Color::Rgb(220, 50, 47),            // red
+            border: Color::Rgb(238, 232, 213),         // base2
+            playing: Color::Rgb(133, 153, 0),          // green
+            paused: Color::Rgb(220, 50, 47),           // red
         }
     }
 
@@ -199,17 +199,17 @@ impl Theme {
     fn dracula() -> Self {
         Self {
             theme_type: ThemeType::Dracula,
-            text: Color::Rgb(248, 248, 242),      // foreground
+            text: Color::Rgb(248, 248, 242),          // foreground
             text_secondary: Color::Rgb(98, 114, 164), // comment
-            background: Color::Rgb(40, 42, 54),   // background
-            highlight: Color::Rgb(255, 121, 198), // pink
-            accent: Color::Rgb(189, 147, 249),    // purple
-            success: Color::Rgb(80, 250, 123),    // green
-            warning: Color::Rgb(241, 250, 140),   // yellow
-            error: Color::Rgb(255, 85, 85),       // red
-            border: Color::Rgb(68, 71, 90),       // current line
-            playing: Color::Rgb(80, 250, 123),    // green
-            paused: Color::Rgb(255, 85, 85),      // red
+            background: Color::Rgb(40, 42, 54),       // background
+            highlight: Color::Rgb(255, 121, 198),     // pink
+            accent: Color::Rgb(189, 147, 249),        // purple
+            success: Color::Rgb(80, 250, 123),        // green
+            warning: Color::Rgb(241, 250, 140),       // yellow
+            error: Color::Rgb(255, 85, 85),           // red
+            border: Color::Rgb(68, 71, 90),           // current line
+            playing: Color::Rgb(80, 250, 123),        // green
+            paused: Color::Rgb(255, 85, 85),          // red
         }
     }
 
@@ -217,17 +217,17 @@ impl Theme {
     fn nord() -> Self {
         Self {
             theme_type: ThemeType::Nord,
-            text: Color::Rgb(216, 222, 233),      // nord4
+            text: Color::Rgb(216, 222, 233),           // nord4
             text_secondary: Color::Rgb(143, 157, 179), // nord3
-            background: Color::Rgb(46, 52, 64),   // nord0
-            highlight: Color::Rgb(136, 192, 208), // nord8
-            accent: Color::Rgb(129, 161, 193),    // nord9
-            success: Color::Rgb(163, 190, 140),   // nord14
-            warning: Color::Rgb(235, 203, 139),   // nord13
-            error: Color::Rgb(191, 97, 106),      // nord11
-            border: Color::Rgb(59, 66, 82),       // nord1
-            playing: Color::Rgb(163, 190, 140),   // nord14
-            paused: Color::Rgb(191, 97, 106),     // nord11
+            background: Color::Rgb(46, 52, 64),        // nord0
+            highlight: Color::Rgb(136, 192, 208),      // nord8
+            accent: Color::Rgb(129, 161, 193),         // nord9
+            success: Color::Rgb(163, 190, 140),        // nord14
+            warning: Color::Rgb(235, 203, 139),        // nord13
+            error: Color::Rgb(191, 97, 106),           // nord11
+            border: Color::Rgb(59, 66, 82),            // nord1
+            playing: Color::Rgb(163, 190, 140),        // nord14
+            paused: Color::Rgb(191, 97, 106),          // nord11
         }
     }
 
@@ -235,17 +235,17 @@ impl Theme {
     fn monokai() -> Self {
         Self {
             theme_type: ThemeType::Monokai,
-            text: Color::Rgb(248, 248, 240),      // foreground
+            text: Color::Rgb(248, 248, 240),          // foreground
             text_secondary: Color::Rgb(117, 113, 94), // comment
-            background: Color::Rgb(39, 40, 34),   // background
-            highlight: Color::Rgb(249, 38, 114),  // pink
-            accent: Color::Rgb(102, 217, 239),    // cyan
-            success: Color::Rgb(166, 226, 46),    // green
-            warning: Color::Rgb(230, 219, 116),   // yellow
-            error: Color::Rgb(249, 38, 114),      // pink
-            border: Color::Rgb(73, 72, 62),       // selection
-            playing: Color::Rgb(166, 226, 46),    // green
-            paused: Color::Rgb(249, 38, 114),     // pink
+            background: Color::Rgb(39, 40, 34),       // background
+            highlight: Color::Rgb(249, 38, 114),      // pink
+            accent: Color::Rgb(102, 217, 239),        // cyan
+            success: Color::Rgb(166, 226, 46),        // green
+            warning: Color::Rgb(230, 219, 116),       // yellow
+            error: Color::Rgb(249, 38, 114),          // pink
+            border: Color::Rgb(73, 72, 62),           // selection
+            playing: Color::Rgb(166, 226, 46),        // green
+            paused: Color::Rgb(249, 38, 114),         // pink
         }
     }
 

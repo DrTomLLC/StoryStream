@@ -189,10 +189,7 @@ mod tests {
         let pool = create_test_db().await.unwrap();
 
         // Verify we can execute queries
-        sqlx::query("SELECT 1;")
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query("SELECT 1;").execute(&pool).await.unwrap();
 
         close(pool).await;
     }

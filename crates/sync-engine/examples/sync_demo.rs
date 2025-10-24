@@ -28,20 +28,24 @@ fn demo_basic_sync() {
     // Record some changes
     println!("\nRecording changes:");
 
-    engine.record_change(
-        ChangeType::Update,
-        EntityType::Position,
-        "book-moby-dick".to_string(),
-        serde_json::json!({"position": 1500, "chapter": 5}),
-    ).unwrap();
+    engine
+        .record_change(
+            ChangeType::Update,
+            EntityType::Position,
+            "book-moby-dick".to_string(),
+            serde_json::json!({"position": 1500, "chapter": 5}),
+        )
+        .unwrap();
     println!("  ✓ Updated position for Moby Dick");
 
-    engine.record_change(
-        ChangeType::Create,
-        EntityType::Bookmark,
-        "bookmark-1".to_string(),
-        serde_json::json!({"title": "Call me Ishmael", "position": 100}),
-    ).unwrap();
+    engine
+        .record_change(
+            ChangeType::Create,
+            EntityType::Bookmark,
+            "bookmark-1".to_string(),
+            serde_json::json!({"title": "Call me Ishmael", "position": 100}),
+        )
+        .unwrap();
     println!("  ✓ Created bookmark");
 
     let state = engine.state().unwrap();
@@ -70,12 +74,14 @@ fn demo_conflict_resolution() {
 
     // Local change
     println!("\nLaptop: Setting position to 1000");
-    engine.record_change(
-        ChangeType::Update,
-        EntityType::Position,
-        "book-123".to_string(),
-        serde_json::json!({"position": 1000}),
-    ).unwrap();
+    engine
+        .record_change(
+            ChangeType::Update,
+            EntityType::Position,
+            "book-123".to_string(),
+            serde_json::json!({"position": 1000}),
+        )
+        .unwrap();
 
     // Wait a bit
     std::thread::sleep(std::time::Duration::from_millis(50));
@@ -120,29 +126,39 @@ fn demo_multi_device() {
 
     // Laptop makes changes
     println!("\nLaptop: Reading Moby Dick");
-    laptop.record_change(
-        ChangeType::Update,
-        EntityType::Position,
-        "moby-dick".to_string(),
-        serde_json::json!({"position": 5000}),
-    ).unwrap();
+    laptop
+        .record_change(
+            ChangeType::Update,
+            EntityType::Position,
+            "moby-dick".to_string(),
+            serde_json::json!({"position": 5000}),
+        )
+        .unwrap();
 
     // Phone makes changes
     println!("Phone: Reading Pride and Prejudice");
-    phone.record_change(
-        ChangeType::Update,
-        EntityType::Position,
-        "pride-prejudice".to_string(),
-        serde_json::json!({"position": 3000}),
-    ).unwrap();
+    phone
+        .record_change(
+            ChangeType::Update,
+            EntityType::Position,
+            "pride-prejudice".to_string(),
+            serde_json::json!({"position": 3000}),
+        )
+        .unwrap();
 
     // Create sync requests
     let laptop_request = laptop.create_sync_request().unwrap();
     let phone_request = phone.create_sync_request().unwrap();
 
     println!("\nSync Summary:");
-    println!("  Laptop has {} pending changes", laptop_request.changes.len());
-    println!("  Phone has {} pending changes", phone_request.changes.len());
+    println!(
+        "  Laptop has {} pending changes",
+        laptop_request.changes.len()
+    );
+    println!(
+        "  Phone has {} pending changes",
+        phone_request.changes.len()
+    );
 
     // Simulate server sync (each device gets other's changes)
     let laptop_response = storystream_sync_engine::SyncResponse::success(phone_request.changes);

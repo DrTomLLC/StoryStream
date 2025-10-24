@@ -78,12 +78,11 @@ impl ConfigWatcher {
 
     /// Reloads the configuration from disk
     fn reload_config(&self) -> ConfigResult<()> {
-        let contents = std::fs::read_to_string(&self.config_path).map_err(|e| {
-            ConfigError::ReadError {
+        let contents =
+            std::fs::read_to_string(&self.config_path).map_err(|e| ConfigError::ReadError {
                 path: self.config_path.clone(),
                 source: e,
-            }
-        })?;
+            })?;
 
         let new_config: Config =
             toml::from_str(&contents).map_err(|e| ConfigError::ParseError {
@@ -119,10 +118,7 @@ impl ConfigWatcher {
         let (tx, rx) = std::sync::mpsc::channel();
 
         let handle = thread::spawn(move || {
-            log::info!(
-                "Config watcher started for {}",
-                self.config_path.display()
-            );
+            log::info!("Config watcher started for {}", self.config_path.display());
 
             loop {
                 // Check for stop signal
@@ -206,7 +202,8 @@ mod tests {
         let (_temp_dir, config_path) = setup_test_config();
         let config = Config::default();
 
-        let mut watcher = ConfigWatcher::new(config_path, config).expect("Failed to create watcher");
+        let mut watcher =
+            ConfigWatcher::new(config_path, config).expect("Failed to create watcher");
 
         let reloaded = watcher.check_and_reload().expect("Check failed");
         assert!(!reloaded);
@@ -217,8 +214,8 @@ mod tests {
         let (_temp_dir, config_path) = setup_test_config();
         let config = Config::default();
 
-        let mut watcher = ConfigWatcher::new(config_path.clone(), config)
-            .expect("Failed to create watcher");
+        let mut watcher =
+            ConfigWatcher::new(config_path.clone(), config).expect("Failed to create watcher");
 
         // Wait a bit to ensure timestamp difference
         thread::sleep(Duration::from_millis(10));

@@ -3,9 +3,7 @@
 // This module provides JNI bindings for audio playback control including
 // play, pause, seek, and state management.
 
-use crate::ffi::{
-    bool_to_jboolean, jstring_raw_to_string, FfiError, FfiResult, HandleManager,
-};
+use crate::ffi::{bool_to_jboolean, jstring_raw_to_string, FfiError, FfiResult, HandleManager};
 use jni::{
     objects::JClass,
     sys::{jboolean, jdouble, jint, jlong, jstring},
@@ -138,7 +136,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeLoad(
 
         crate::ffi::log_info("StoryStream", &format!("Loading audio file: {}", path));
 
-        player.read().unwrap().load(&path)
+        player
+            .read()
+            .unwrap()
+            .load(&path)
             .map_err(|e| FfiError::General(format!("Failed to load audio: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -157,7 +158,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativePlay(
 
         crate::ffi::log_info("StoryStream", "Starting playback");
 
-        player.read().unwrap().play()
+        player
+            .read()
+            .unwrap()
+            .play()
             .map_err(|e| FfiError::General(format!("Failed to play: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -176,7 +180,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativePause(
 
         crate::ffi::log_info("StoryStream", "Pausing playback");
 
-        player.read().unwrap().pause()
+        player
+            .read()
+            .unwrap()
+            .pause()
             .map_err(|e| FfiError::General(format!("Failed to pause: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -195,7 +202,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeStop(
 
         crate::ffi::log_info("StoryStream", "Stopping playback");
 
-        player.read().unwrap().stop()
+        player
+            .read()
+            .unwrap()
+            .stop()
             .map_err(|e| FfiError::General(format!("Failed to stop: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -217,9 +227,15 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSeek(
             return Err(FfiError::General("Position cannot be negative".to_string()));
         }
 
-        crate::ffi::log_info("StoryStream", &format!("Seeking to: {:.2}s", position_seconds));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Seeking to: {:.2}s", position_seconds),
+        );
 
-        player.read().unwrap().seek(Duration::from_secs_f64(position_seconds))
+        player
+            .read()
+            .unwrap()
+            .seek(Duration::from_secs_f64(position_seconds))
             .map_err(|e| FfiError::General(format!("Failed to seek: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -280,12 +296,17 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSetSpeed(
         let player = PLAYER_HANDLES.get(handle)?;
 
         if !(0.25..=4.0).contains(&speed) {
-            return Err(FfiError::General("Speed must be between 0.25 and 4.0".to_string()));
+            return Err(FfiError::General(
+                "Speed must be between 0.25 and 4.0".to_string(),
+            ));
         }
 
         crate::ffi::log_info("StoryStream", &format!("Setting speed: {:.2}x", speed));
 
-        player.read().unwrap().set_speed(speed)
+        player
+            .read()
+            .unwrap()
+            .set_speed(speed)
             .map_err(|e| FfiError::General(format!("Failed to set speed: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -318,12 +339,17 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSetVolume(
         let player = PLAYER_HANDLES.get(handle)?;
 
         if !(0.0..=1.0).contains(&volume) {
-            return Err(FfiError::General("Volume must be between 0.0 and 1.0".to_string()));
+            return Err(FfiError::General(
+                "Volume must be between 0.0 and 1.0".to_string(),
+            ));
         }
 
         crate::ffi::log_info("StoryStream", &format!("Setting volume: {:.2}", volume));
 
-        player.read().unwrap().set_volume(volume)
+        player
+            .read()
+            .unwrap()
+            .set_volume(volume)
             .map_err(|e| FfiError::General(format!("Failed to set volume: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
@@ -371,10 +397,15 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSkipToChapter(
         let _player = PLAYER_HANDLES.get(handle)?;
 
         if chapter_index < 0 {
-            return Err(FfiError::General("Chapter index cannot be negative".to_string()));
+            return Err(FfiError::General(
+                "Chapter index cannot be negative".to_string(),
+            ));
         }
 
-        crate::ffi::log_info("StoryStream", &format!("Skipping to chapter: {}", chapter_index));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Skipping to chapter: {}", chapter_index),
+        );
 
         // Placeholder: Would skip to chapter
         Ok(bool_to_jboolean(true))
@@ -390,7 +421,10 @@ pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeDestroy(
 ) {
     crate::jni_safe!(env, (), {
         PLAYER_HANDLES.remove(handle)?;
-        crate::ffi::log_info("StoryStream", &format!("Destroyed player handle: {}", handle));
+        crate::ffi::log_info(
+            "StoryStream",
+            &format!("Destroyed player handle: {}", handle),
+        );
         Ok(())
     })
 }

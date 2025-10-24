@@ -1,8 +1,8 @@
 //! Chapter database operations
 
 use crate::DbPool;
-use storystream_core::{AppError, BookId, Chapter, ChapterId, Duration};
 use std::path::PathBuf;
+use storystream_core::{AppError, BookId, Chapter, ChapterId, Duration};
 
 /// Creates a new chapter
 pub async fn create_chapter(pool: &DbPool, chapter: &Chapter) -> Result<(), AppError> {
@@ -70,21 +70,26 @@ pub async fn delete_chapter(pool: &DbPool, id: ChapterId) -> Result<(), AppError
 pub(crate) fn row_to_chapter(row: sqlx::sqlite::SqliteRow) -> Result<Chapter, AppError> {
     use sqlx::Row;
 
-    let id_str: String = row.try_get("id")
+    let id_str: String = row
+        .try_get("id")
         .map_err(|e| AppError::database("Missing chapter ID", e))?;
-    let id = ChapterId::from_string(&id_str)
-        .map_err(|e| AppError::database("Invalid chapter ID", e))?;
+    let id =
+        ChapterId::from_string(&id_str).map_err(|e| AppError::database("Invalid chapter ID", e))?;
 
-    let book_id_str: String = row.try_get("book_id")
+    let book_id_str: String = row
+        .try_get("book_id")
         .map_err(|e| AppError::database("Missing book ID", e))?;
-    let book_id = BookId::from_string(&book_id_str)
-        .map_err(|e| AppError::database("Invalid book ID", e))?;
+    let book_id =
+        BookId::from_string(&book_id_str).map_err(|e| AppError::database("Invalid book ID", e))?;
 
-    let start_time_ms: i64 = row.try_get("start_time_ms")
+    let start_time_ms: i64 = row
+        .try_get("start_time_ms")
         .map_err(|e| AppError::database("Missing start time", e))?;
-    let end_time_ms: i64 = row.try_get("end_time_ms")
+    let end_time_ms: i64 = row
+        .try_get("end_time_ms")
         .map_err(|e| AppError::database("Missing end time", e))?;
-    let index: i64 = row.try_get("index_number")
+    let index: i64 = row
+        .try_get("index_number")
         .map_err(|e| AppError::database("Missing index", e))?;
 
     let image_path_str: Option<String> = row.try_get("image_path").ok();
@@ -92,7 +97,8 @@ pub(crate) fn row_to_chapter(row: sqlx::sqlite::SqliteRow) -> Result<Chapter, Ap
     Ok(Chapter {
         id,
         book_id,
-        title: row.try_get("title")
+        title: row
+            .try_get("title")
             .map_err(|e| AppError::database("Missing title", e))?,
         index: index as u32,
         start_time: Duration::from_millis(start_time_ms as u64),
@@ -107,8 +113,8 @@ mod tests {
     use crate::connection::create_test_db;
     use crate::migrations::run_migrations;
     use crate::queries::books::create_book;
-    use storystream_core::Book;
     use std::path::PathBuf;
+    use storystream_core::Book;
 
     async fn setup() -> DbPool {
         let pool = create_test_db().await.unwrap();
