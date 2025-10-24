@@ -1,80 +1,70 @@
-// crates/android-bridge/src/library_bridge.rs
-//! Library bridge for exposing library management functionality to Android
-//!
-//! This module provides JNI bindings for:
-//! - Library scanning and import
-//! - Book metadata access
-//! - Library queries and searches
-//! - Collection management
+// Library management bridge for Android JNI
+//
+// This module provides JNI bindings for audiobook library management including
+// initialization, scanning, and metadata retrieval.
 
 use crate::ffi::{
-    bool_to_jboolean, jstring_to_string, option_string_to_jstring, string_to_jstring, FfiError,
+    bool_to_jboolean, jstring_raw_to_string, option_string_to_jstring, string_to_jstring, FfiError,
     FfiResult, HandleManager,
 };
+use jni::{objects::JClass, sys::{jboolean, jint, jlong, jstring}, JNIEnv};
+use std::panic;
 use crate::jni_safe;
-use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jint, jlong, jstring};
-use jni::JNIEnv;
-use once_cell::sync::Lazy;
-use std::sync::Arc;
+// Required for jni_safe! macro
 
-// Placeholder types until we implement proper integration
-pub struct LibraryManager {
-    // Internal state will be added when integrating with library module
+/// Global library handle manager
+static LIBRARY_HANDLES: once_cell::sync::Lazy<HandleManager<LibraryContext>> =
+    once_cell::sync::Lazy::new(HandleManager::default);
+
+/// Library context holding state for a library instance
+#[derive(Clone)]
+struct LibraryContext {
+    root_path: String,
+    initialized: bool,
 }
 
-pub struct BookMetadata {
-    pub id: String,
-    pub title: String,
-    pub author: Option<String>,
-    pub narrator: Option<String>,
-    pub duration: Option<f64>,
-    pub file_path: String,
-    pub cover_art_path: Option<String>,
+impl LibraryContext {
+    fn new(root_path: String) -> Self {
+        Self {
+            root_path,
+            initialized: true,
+        }
+    }
 }
 
-pub struct ScanProgress {
-    pub files_scanned: usize,
-    pub books_found: usize,
-    pub is_complete: bool,
-}
-
-// Global handle manager for library instances
-static LIBRARY_HANDLES: Lazy<HandleManager<Arc<LibraryManager>>> = Lazy::new(HandleManager::new);
-
-/// Creates a new library manager instance
+/// Initialize a new library instance
 ///
 /// # Safety
-/// The returned handle must be properly released using `library_destroy`
-/// to prevent memory leaks.
+/// Must be called from Java with valid JNI environment and parameters
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeCreate(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeInitialize(
     mut env: JNIEnv,
     _class: JClass,
-    library_root_path: JString,
+    library_root_path: jstring,
 ) -> jlong {
     jni_safe!(env, 0, {
-        let path = jstring_to_string(&mut env, library_root_path)?;
+        let path = jstring_raw_to_string(&mut env, library_root_path)?;
 
-        // TODO: Create actual LibraryManager from library module
-        let library = Arc::new(LibraryManager {});
+        // Validate path
+        if path.is_empty() {
+            return Err(FfiError::General("Library root path cannot be empty".to_string()));
+        }
 
-        let handle = LIBRARY_HANDLES.insert(library);
-        crate::ffi::log_info(
-            "StoryStream",
-            &format!("Created library handle: {} for path: {}", handle, path),
-        );
+        let context = LibraryContext::new(path.clone());
+        let handle = LIBRARY_HANDLES.insert(context);
+
+        crate::ffi::log_info("StoryStream", &format!("Initialized library at: {} (handle: {})", path, handle));
 
         Ok(handle)
     })
 }
 
-/// Destroys a library manager instance
+/// Destroy a library instance and free resources
 ///
 /// # Safety
-/// After calling this function, the handle becomes invalid and must not be used.
+/// Must be called from Java with valid handle
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeDestroy(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeDestroy(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -86,11 +76,12 @@ pub extern "C" fn Java_com_storystream_Library_nativeDestroy(
     })
 }
 
-/// Starts scanning the library for audiobook files
+/// Scan library for audiobooks
 ///
-/// This is an asynchronous operation. Use `library_get_scan_progress` to check status.
+/// # Safety
+/// Must be called from Java with valid handle
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeStartScan(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeScanLibrary(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -98,16 +89,16 @@ pub extern "C" fn Java_com_storystream_Library_nativeStartScan(
     jni_safe!(env, bool_to_jboolean(false), {
         LIBRARY_HANDLES.get(handle)?;
 
-        // TODO: Start actual scan using library module
-        crate::ffi::log_info("StoryStream", "Library scan started");
+        // Placeholder: In real implementation, would scan filesystem
+        crate::ffi::log_info("StoryStream", "Scanning library for audiobooks");
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Cancels an ongoing library scan
+/// Check if library is initialized
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeCancelScan(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeIsInitialized(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -115,16 +106,14 @@ pub extern "C" fn Java_com_storystream_Library_nativeCancelScan(
     jni_safe!(env, bool_to_jboolean(false), {
         LIBRARY_HANDLES.get(handle)?;
 
-        // TODO: Cancel scan using library module
-        crate::ffi::log_info("StoryStream", "Library scan cancelled");
-
+        // Placeholder: Always return true for valid handles
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Checks if a scan is currently in progress
+/// Check if library directory exists
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeIsScanInProgress(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeDirectoryExists(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -132,16 +121,14 @@ pub extern "C" fn Java_com_storystream_Library_nativeIsScanInProgress(
     jni_safe!(env, bool_to_jboolean(false), {
         LIBRARY_HANDLES.get(handle)?;
 
-        // TODO: Check scan status from library module
-        Ok(bool_to_jboolean(false))
+        // Placeholder: Would check actual filesystem
+        Ok(bool_to_jboolean(true))
     })
 }
 
-/// Gets the current scan progress
-///
-/// Returns the number of files scanned so far, or -1 if no scan is in progress.
+/// Get number of books in library
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetFilesScanned(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookCount(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -149,206 +136,196 @@ pub extern "C" fn Java_com_storystream_Library_nativeGetFilesScanned(
     jni_safe!(env, -1, {
         LIBRARY_HANDLES.get(handle)?;
 
-        // TODO: Get scan progress from library module
+        // Placeholder: Would return actual count
         Ok(0)
     })
 }
 
-/// Gets the number of books found during scanning
+/// Get library root path
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBooksFound(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetRootPath(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-) -> jint {
-    jni_safe!(env, 0, {
-        LIBRARY_HANDLES.get(handle)?;
-
-        // TODO: Get books found count from library module
-        Ok(0)
-    })
-}
-
-/// Gets the total number of books in the library
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookCount(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-) -> jint {
-    jni_safe!(env, 0, {
-        LIBRARY_HANDLES.get(handle)?;
-
-        // TODO: Get total book count from library module
-        Ok(0)
-    })
-}
-
-/// Imports a specific audiobook file into the library
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeImportFile(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-    file_path: JString,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let path = jstring_to_string(&mut env, file_path)?;
 
-        // TODO: Import file using library module
-        crate::ffi::log_info("StoryStream", &format!("Importing file: {}", path));
+        // Placeholder: Would return actual path
+        string_to_jstring(&mut env, "/placeholder/path")
+    })
+}
 
-        // Return a placeholder book ID
+/// Get library size in bytes
+#[no_mangle]
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetLibrarySize(
+    mut env: JNIEnv,
+    _class: JClass,
+    handle: jlong,
+) -> jlong {
+    jni_safe!(env, 0, {
+        LIBRARY_HANDLES.get(handle)?;
+
+        // Placeholder: Would calculate actual size
+        Ok(0)
+    })
+}
+
+/// Add audiobook from file path
+#[no_mangle]
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeAddBook(
+    mut env: JNIEnv,
+    _class: JClass,
+    handle: jlong,
+    file_path: jstring,
+) -> jstring {
+    jni_safe!(env, std::ptr::null_mut(), {
+        LIBRARY_HANDLES.get(handle)?;
+        let path = jstring_raw_to_string(&mut env, file_path)?;
+
+        crate::ffi::log_info("StoryStream", &format!("Adding book from: {}", path));
+
+        // Placeholder: Would parse metadata and add to library
         string_to_jstring(&mut env, "placeholder-book-id")
     })
 }
 
-/// Gets book metadata by ID
-///
-/// Returns null if the book doesn't exist.
+/// Get book title by ID
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookTitle(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookTitle(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Get book title from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get title for book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Getting title for book: {}", id));
 
+        // Placeholder: Would query database
         string_to_jstring(&mut env, "Unknown Title")
     })
 }
 
-/// Gets the author name for a book
+/// Get book author by ID
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookAuthor(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookAuthor(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Get book author from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get author for book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Getting author for book: {}", id));
 
+        // Placeholder: Would query database
         option_string_to_jstring(&mut env, Some("Unknown Author"))
     })
 }
 
-/// Gets the narrator name for a book
+/// Get book narrator by ID
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookNarrator(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookNarrator(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Get book narrator from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get narrator for book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Getting narrator for book: {}", id));
 
+        // Placeholder: Would query database
         Ok(std::ptr::null_mut()) // Return null for no narrator
     })
 }
 
-/// Gets the file path for a book
+/// Get book file path by ID
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookFilePath(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookPath(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Get book file path from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get file path for book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Getting path for book: {}", id));
 
+        // Placeholder: Would query database
         string_to_jstring(&mut env, "/path/to/audiobook.mp3")
     })
 }
 
-/// Gets the cover art path for a book
-///
-/// Returns null if no cover art is available.
+/// Get book cover art path by ID
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetBookCoverPath(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetBookCoverArt(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Get cover art path from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get cover art for book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Getting cover art for book: {}", id));
 
+        // Placeholder: Would query database
         Ok(std::ptr::null_mut()) // Return null for no cover art
     })
 }
 
-/// Searches the library for books matching a query
-///
-/// Returns an array of book IDs as a JSON string.
+/// Search library with query string
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeSearch(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeSearchBooks(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    query: JString,
+    query: jstring,
 ) -> jstring {
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
-        let query_str = jstring_to_string(&mut env, query)?;
+        let query_str = jstring_raw_to_string(&mut env, query)?;
 
-        // TODO: Perform actual search using library module
-        crate::ffi::log_debug("StoryStream", &format!("Search query: {}", query_str));
+        crate::ffi::log_info("StoryStream", &format!("Searching library: {}", query_str));
 
-        // Return empty JSON array for now
+        // Placeholder: Would search database and return JSON array
         string_to_jstring(&mut env, "[]")
     })
 }
 
-/// Deletes a book from the library
-///
-/// Note: This removes the database entry but does NOT delete the physical file.
+/// Remove book from library
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeDeleteBook(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeRemoveBook(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jboolean {
     jni_safe!(env, bool_to_jboolean(false), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Delete book using library module
-        crate::ffi::log_info("StoryStream", &format!("Delete book: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Removing book: {}", id));
 
+        // Placeholder: Would remove from database
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Gets a list of all book IDs in the library as a JSON array string
+/// Get all book IDs in library (JSON array)
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeListAllBooks(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetAllBookIds(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -356,17 +333,14 @@ pub extern "C" fn Java_com_storystream_Library_nativeListAllBooks(
     jni_safe!(env, std::ptr::null_mut(), {
         LIBRARY_HANDLES.get(handle)?;
 
-        // TODO: Get all book IDs from library module
-        crate::ffi::log_debug("StoryStream", "List all books");
-
-        // Return empty JSON array for now
+        // Placeholder: Would query database
         string_to_jstring(&mut env, "[]")
     })
 }
 
-/// Gets recently added books (returns JSON array of book IDs)
+/// Get recently added books (JSON array)
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeGetRecentBooks(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeGetRecentBooks(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
@@ -376,32 +350,31 @@ pub extern "C" fn Java_com_storystream_Library_nativeGetRecentBooks(
         LIBRARY_HANDLES.get(handle)?;
 
         if limit < 0 {
-            return Err(FfiError::Core("Limit must be non-negative".to_string()));
+            return Err(FfiError::General("Limit must be non-negative".to_string()));
         }
 
-        // TODO: Get recent books from library module
-        crate::ffi::log_debug("StoryStream", &format!("Get {} recent books", limit));
+        crate::ffi::log_info("StoryStream", &format!("Getting {} recent books", limit));
 
-        // Return empty JSON array for now
+        // Placeholder: Would query database
         string_to_jstring(&mut env, "[]")
     })
 }
 
-/// Refreshes metadata for a specific book
+/// Update book metadata
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Library_nativeRefreshMetadata(
+pub extern "C" fn Java_com_storystream_StoryStreamLibrary_nativeUpdateBookMetadata(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    book_id: JString,
+    book_id: jstring,
 ) -> jboolean {
     jni_safe!(env, bool_to_jboolean(false), {
         LIBRARY_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, book_id)?;
+        let id = jstring_raw_to_string(&mut env, book_id)?;
 
-        // TODO: Refresh metadata using library module
-        crate::ffi::log_info("StoryStream", &format!("Refresh metadata for: {}", id));
+        crate::ffi::log_info("StoryStream", &format!("Updating metadata for book: {}", id));
 
+        // Placeholder: Would update database
         Ok(bool_to_jboolean(true))
     })
 }
@@ -411,26 +384,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_library_handles_lifecycle() {
-        let library1 = Arc::new(LibraryManager {});
-        let library2 = Arc::new(LibraryManager {});
-
-        let handle1 = LIBRARY_HANDLES.insert(library1);
-        let handle2 = LIBRARY_HANDLES.insert(library2);
-
-        assert_ne!(handle1, handle2);
-        assert!(LIBRARY_HANDLES.contains(handle1));
-        assert!(LIBRARY_HANDLES.contains(handle2));
-
-        LIBRARY_HANDLES.remove(handle1).unwrap();
-        assert!(!LIBRARY_HANDLES.contains(handle1));
-
-        LIBRARY_HANDLES.remove(handle2).unwrap();
+    fn test_library_context_creation() {
+        let ctx = LibraryContext::new("/test/path".to_string());
+        assert_eq!(ctx.root_path, "/test/path");
+        assert!(ctx.initialized);
     }
 
     #[test]
-    fn test_invalid_library_handle() {
-        let result = LIBRARY_HANDLES.get(88888);
-        assert!(result.is_err());
+    fn test_handle_lifecycle() {
+        let ctx = LibraryContext::new("/test".to_string());
+        let handle = LIBRARY_HANDLES.insert(ctx.clone());
+        assert!(handle > 0);
+
+        let retrieved = LIBRARY_HANDLES.get(handle);
+        assert!(retrieved.is_ok());
+
+        let removed = LIBRARY_HANDLES.remove(handle);
+        assert!(removed.is_ok());
+
+        let not_found = LIBRARY_HANDLES.get(handle);
+        assert!(not_found.is_err());
     }
 }

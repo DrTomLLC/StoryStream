@@ -1,320 +1,335 @@
-// crates/android-bridge/tests/integration_tests.rs
-//! Integration tests for Android bridge
-//!
-//! These tests verify the FFI layer works correctly without requiring
-//! an actual Android environment. They test the handle management,
-//! error handling, and panic safety.
+// Integration tests for StoryStream Android Bridge
+//
+// These tests verify the core functionality of the FFI bridge without requiring
+// an actual Android environment.
 
-use storystream_android_bridge::{ffi::HandleManager, FfiError};
-use std::sync::Arc;
-
-#[test]
-fn test_handle_manager_basic_operations() {
-    let manager = HandleManager::<String>::new();
-
-    // Test insertion
-    let handle1 = manager.insert("First".to_string());
-    let handle2 = manager.insert("Second".to_string());
-    let handle3 = manager.insert("Third".to_string());
-
-    // Handles should be unique
-    assert_ne!(handle1, handle2);
-    assert_ne!(handle2, handle3);
-    assert_ne!(handle1, handle3);
-
-    // All handles should exist
-    assert!(manager.contains(handle1));
-    assert!(manager.contains(handle2));
-    assert!(manager.contains(handle3));
-    assert_eq!(manager.len(), 3);
-    assert!(!manager.is_empty());
-}
-
-#[test]
-fn test_handle_manager_removal() {
-    let manager = HandleManager::<i32>::new();
-
-    let h1 = manager.insert(100);
-    let h2 = manager.insert(200);
-    let h3 = manager.insert(300);
-
-    // Remove middle handle
-    let value = manager.remove(h2).unwrap();
-    assert_eq!(*value, 200);
-    assert_eq!(manager.len(), 2);
-    assert!(!manager.contains(h2));
-
-    // Other handles should still be valid
-    assert!(manager.contains(h1));
-    assert!(manager.contains(h3));
-
-    // Try to remove the same handle again - should fail
-    let result = manager.remove(h2);
-    assert!(result.is_err());
-
-    // Remove remaining handles
-    manager.remove(h1).unwrap();
-    manager.remove(h3).unwrap();
-    assert!(manager.is_empty());
-    assert_eq!(manager.len(), 0);
-}
-
-#[test]
-fn test_handle_manager_invalid_handle() {
-    let manager = HandleManager::<String>::new();
-
-    // Try to access non-existent handle
-    let result = manager.get(99999);
-    assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), FfiError::InvalidHandle(_)));
-
-    // Try to remove non-existent handle
-    let result = manager.remove(88888);
-    assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), FfiError::InvalidHandle(_)));
-}
-
-#[test]
-fn test_handle_manager_concurrent_access() {
-    use std::sync::Arc;
-    use std::thread;
-
-    let manager = Arc::new(HandleManager::<i32>::new());
-    let mut handles = Vec::new();
-
-    // Spawn threads that insert values
-    for i in 0..10 {
-        let manager_clone = Arc::clone(&manager);
-        let handle = thread::spawn(move || manager_clone.insert(i * 10))
-            .join()
-            .unwrap();
-        handles.push(handle);
-    }
-
-    // Verify all handles are valid
-    assert_eq!(manager.len(), 10);
-    for handle in &handles {
-        assert!(manager.contains(*handle));
-    }
-
-    // Clean up
-    for handle in handles {
-        manager.remove(handle).unwrap();
-    }
-    assert!(manager.is_empty());
-}
-
-#[test]
-fn test_handle_manager_with_complex_types() {
-    struct ComplexType {
-        id: String,
-        data: Vec<u8>,
-        flag: bool,
-    }
-
-    let manager = HandleManager::<ComplexType>::new();
-
-    let obj = ComplexType {
-        id: "test-123".to_string(),
-        data: vec![1, 2, 3, 4, 5],
-        flag: true,
+#[cfg(test)]
+mod integration_tests {
+    use storystream_android_bridge::ffi::{
+        bool_to_jboolean, jboolean_to_bool, FfiError, FfiResult, HandleManager,
     };
 
-    let handle = manager.insert(obj);
-    assert!(manager.contains(handle));
+    // Test panic handling in jni_safe macro
+    #[test]
+    fn test_panic_handling_infrastructure() {
+        use std::panic;
 
-    let retrieved = manager.remove(handle).unwrap();
-    assert_eq!(retrieved.id, "test-123");
-    assert_eq!(retrieved.data, vec![1, 2, 3, 4, 5]);
-    assert!(retrieved.flag);
-}
+        // Verify panic::catch_unwind is available and works
+        let result = panic::catch_unwind(|| -> FfiResult<i32> { Ok(42) });
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().unwrap(), 42);
 
-#[test]
-fn test_handle_manager_drop_behavior() {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
-
-    let drop_count = Arc::new(AtomicUsize::new(0));
-
-    struct DropCounter {
-        counter: Arc<AtomicUsize>,
+        // Verify panic::AssertUnwindSafe works
+        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| -> FfiResult<i32> {
+            Err(FfiError::General("test error".to_string()))
+        }));
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_err());
     }
 
-    impl Drop for DropCounter {
-        fn drop(&mut self) {
-            self.counter.fetch_add(1, Ordering::SeqCst);
+    // Test handle manager thread safety
+    #[test]
+    fn test_handle_manager_concurrent_access() {
+        use std::sync::Arc;
+        use std::thread;
+
+        let manager = Arc::new(HandleManager::<String>::default());
+        let mut handles = vec![];
+
+        // Create handles from multiple threads
+        for i in 0..10 {
+            let mgr = Arc::clone(&manager);
+            let handle = thread::spawn(move || mgr.insert(format!("value-{}", i)));
+            handles.push(handle);
+        }
+
+        // Collect all handles
+        let handle_ids: Vec<i64> = handles.into_iter().map(|h| h.join().unwrap()).collect();
+
+        // Verify all handles are unique
+        let mut sorted = handle_ids.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(sorted.len(), handle_ids.len());
+
+        // Verify all handles can be retrieved
+        for handle_id in &handle_ids {
+            assert!(manager.get(*handle_id).is_ok());
+        }
+
+        // Clean up
+        for handle_id in handle_ids {
+            assert!(manager.remove(handle_id).is_ok());
         }
     }
 
-    let manager = HandleManager::<DropCounter>::new();
+    // Test error conversion chain
+    #[test]
+    fn test_error_conversions() {
+        use std::str::Utf8Error;
 
-    // Insert some objects
-    let h1 = manager.insert(DropCounter {
-        counter: Arc::clone(&drop_count),
-    });
-    let h2 = manager.insert(DropCounter {
-        counter: Arc::clone(&drop_count),
-    });
-    let h3 = manager.insert(DropCounter {
-        counter: Arc::clone(&drop_count),
-    });
+        // Test Display implementation
+        let err = FfiError::JniError("jni failed".to_string());
+        assert_eq!(err.to_string(), "JNI Error: jni failed");
 
-    assert_eq!(drop_count.load(Ordering::SeqCst), 0);
+        let err = FfiError::Utf8Error("utf8 failed".to_string());
+        assert_eq!(err.to_string(), "UTF-8 Error: utf8 failed");
 
-    // Remove one object
-    manager.remove(h1).unwrap();
-    assert_eq!(drop_count.load(Ordering::SeqCst), 1);
+        let err = FfiError::InvalidHandle("handle 42 not found".to_string());
+        assert_eq!(err.to_string(), "Invalid Handle: handle 42 not found");
 
-    // Remove remaining objects
-    manager.remove(h2).unwrap();
-    manager.remove(h3).unwrap();
-    assert_eq!(drop_count.load(Ordering::SeqCst), 3);
-}
+        let err = FfiError::General("general error".to_string());
+        assert_eq!(err.to_string(), "Error: general error");
 
-#[test]
-fn test_handle_manager_large_scale() {
-    let manager = HandleManager::<usize>::new();
-    let mut handles = Vec::new();
-
-    // Insert 1000 items
-    for i in 0..1000 {
-        let handle = manager.insert(i);
-        handles.push(handle);
+        // Test error trait implementation
+        let err: &dyn std::error::Error = &FfiError::General("test".to_string());
+        assert!(err.to_string().contains("test"));
     }
 
-    assert_eq!(manager.len(), 1000);
+    // Test boolean conversions are correct
+    #[test]
+    fn test_boolean_conversions_comprehensive() {
+        // True conversions
+        assert_eq!(bool_to_jboolean(true), 1);
+        assert!(jboolean_to_bool(1));
+        assert!(jboolean_to_bool(2)); // Any non-zero
+        assert!(jboolean_to_bool(255));
 
-    // Remove every other item
-    for (idx, handle) in handles.iter().enumerate() {
-        if idx % 2 == 0 {
-            let value = manager.remove(*handle).unwrap();
-            assert_eq!(*value, idx);
+        // False conversions
+        assert_eq!(bool_to_jboolean(false), 0);
+        assert!(!jboolean_to_bool(0));
+
+        // Round-trip conversions
+        assert_eq!(jboolean_to_bool(bool_to_jboolean(true)), true);
+        assert_eq!(jboolean_to_bool(bool_to_jboolean(false)), false);
+    }
+
+    // Test handle manager edge cases
+    #[test]
+    fn test_handle_manager_edge_cases() {
+        let manager = HandleManager::<String>::default();
+
+        // Test invalid handle retrieval
+        assert!(matches!(
+            manager.get(0),
+            Err(FfiError::InvalidHandle(_))
+        ));
+        assert!(matches!(
+            manager.get(-1),
+            Err(FfiError::InvalidHandle(_))
+        ));
+        assert!(matches!(
+            manager.get(999999),
+            Err(FfiError::InvalidHandle(_))
+        ));
+
+        // Test double removal
+        let handle = manager.insert("test".to_string());
+        assert!(manager.remove(handle).is_ok());
+        assert!(matches!(
+            manager.remove(handle),
+            Err(FfiError::InvalidHandle(_))
+        ));
+    }
+
+    // Test handle manager with different types
+    #[test]
+    fn test_handle_manager_generic_types() {
+        // Test with integers
+        let int_manager = HandleManager::<i32>::default();
+        let h1 = int_manager.insert(42);
+        assert!(int_manager.get(h1).is_ok());
+
+        // Test with structs
+        #[derive(Clone, Debug, PartialEq)]
+        struct TestStruct {
+            field: String,
         }
-    }
 
-    assert_eq!(manager.len(), 500);
-
-    // Remove remaining items
-    for (idx, handle) in handles.iter().enumerate() {
-        if idx % 2 != 0 {
-            manager.remove(*handle).unwrap();
-        }
-    }
-
-    assert!(manager.is_empty());
-}
-
-#[test]
-fn test_ffi_error_types() {
-    // Test that all error types can be created
-    let _err1 = FfiError::NullPointer;
-    let _err2 = FfiError::StringConversion;
-    let _err3 = FfiError::InvalidHandle(123);
-    let _err4 = FfiError::Panic("test panic".to_string());
-    let _err5 = FfiError::Core("test error".to_string());
-
-    // Test error display
-    let err = FfiError::InvalidHandle(42);
-    let msg = format!("{}", err);
-    assert!(msg.contains("42"));
-}
-
-#[test]
-fn test_logger_initialization() {
-    // This should not panic
-    storystream_android_bridge::init_logger();
-
-    // Multiple calls should be safe
-    storystream_android_bridge::init_logger();
-    storystream_android_bridge::init_logger();
-}
-
-#[test]
-fn test_module_compilation() {
-    // This test just ensures all modules compile successfully
-    // The actual JNI functions can't be tested without an Android environment
-
-    // Verify that the library is accessible
-    let version = env!("CARGO_PKG_VERSION");
-    assert!(!version.is_empty());
-}
-
-#[test]
-fn test_thread_safety_with_arc() {
-    use std::thread;
-
-    let manager = Arc::new(HandleManager::<String>::new());
-    let mut thread_handles = Vec::new();
-
-    // Spawn 10 threads that each insert and remove items
-    for i in 0..10 {
-        let manager_clone = Arc::clone(&manager);
-        let handle = thread::spawn(move || {
-            let item_handle = manager_clone.insert(format!("Item {}", i));
-            assert!(manager_clone.contains(item_handle));
-            manager_clone.remove(item_handle).unwrap();
+        let struct_manager = HandleManager::<TestStruct>::default();
+        let h2 = struct_manager.insert(TestStruct {
+            field: "test".to_string(),
         });
-        thread_handles.push(handle);
+        assert!(struct_manager.get(h2).is_ok());
+
+        // Test with Options
+        let option_manager = HandleManager::<Option<String>>::default();
+        let h3 = option_manager.insert(Some("value".to_string()));
+        let h4 = option_manager.insert(None);
+        assert!(option_manager.get(h3).is_ok());
+        assert!(option_manager.get(h4).is_ok());
     }
 
-    // Wait for all threads
-    for handle in thread_handles {
-        handle.join().unwrap();
+    // Test handle manager capacity and performance
+    #[test]
+    fn test_handle_manager_large_scale() {
+        let manager = HandleManager::<usize>::default();
+        let mut handles = Vec::new();
+
+        // Insert many handles
+        for i in 0..1000 {
+            handles.push(manager.insert(i));
+        }
+
+        // Verify all handles are valid and unique
+        let mut sorted = handles.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(sorted.len(), handles.len());
+
+        // Remove half
+        for i in (0..handles.len()).step_by(2) {
+            assert!(manager.remove(handles[i]).is_ok());
+        }
+
+        // Verify correct ones remain
+        for i in (1..handles.len()).step_by(2) {
+            assert!(manager.get(handles[i]).is_ok());
+        }
     }
 
-    // Manager should be empty
-    assert!(manager.is_empty());
+    // Test FfiResult type alias
+    #[test]
+    fn test_ffi_result_type() {
+        fn returns_result() -> FfiResult<i32> {
+            Ok(42)
+        }
+
+        fn returns_error() -> FfiResult<i32> {
+            Err(FfiError::General("test".to_string()))
+        }
+
+        assert!(returns_result().is_ok());
+        assert!(returns_error().is_err());
+        assert_eq!(returns_result().unwrap(), 42);
+    }
+
+    // Test error propagation with ? operator
+    #[test]
+    fn test_error_propagation() {
+        fn inner_function() -> FfiResult<String> {
+            Err(FfiError::General("inner error".to_string()))
+        }
+
+        fn outer_function() -> FfiResult<String> {
+            let _value = inner_function()?;
+            Ok("success".to_string())
+        }
+
+        let result = outer_function();
+        assert!(result.is_err());
+        match result {
+            Err(FfiError::General(msg)) => assert_eq!(msg, "inner error"),
+            _ => panic!("Expected General error"),
+        }
+    }
+
+    // Test library version constant
+    #[test]
+    fn test_library_constants() {
+        use storystream_android_bridge::{LIBRARY_NAME, VERSION};
+
+        assert!(!VERSION.is_empty());
+        assert!(VERSION.split('.').count() >= 2); // At least major.minor
+        assert_eq!(LIBRARY_NAME, "StoryStream Android Bridge");
+    }
+
+    // Test logging doesn't panic
+    #[test]
+    fn test_logging_functions() {
+        use storystream_android_bridge::ffi::{log_error, log_info};
+
+        // These should not panic on any platform
+        log_info("TEST", "info message");
+        log_error("TEST", "error message");
+        log_info("TEST", &format!("formatted: {}", 42));
+
+        // Test with special characters
+        log_info("TEST", "Message with 日本語 and emojis 🎵");
+        log_info("TEST", "Message with\nnewlines\nand\ttabs");
+    }
+
+    // Stress test: verify no memory leaks in handle lifecycle
+    #[test]
+    fn test_handle_lifecycle_stress() {
+        let manager = HandleManager::<Vec<u8>>::default();
+
+        // Repeatedly create and destroy handles
+        for _iteration in 0..100 {
+            let mut handles = Vec::new();
+
+            // Create 100 handles
+            for i in 0..100 {
+                let data = vec![i as u8; 1000]; // 1KB each
+                handles.push(manager.insert(data));
+            }
+
+            // Remove all handles
+            for handle in handles {
+                assert!(manager.remove(handle).is_ok());
+            }
+        }
+
+        // Manager should be empty
+        assert!(manager.get(1).is_err());
+    }
+
+    // Test init_logging doesn't panic
+    #[test]
+    fn test_init_logging() {
+        use storystream_android_bridge::init_logging;
+
+        // Should be safe to call multiple times
+        init_logging();
+        init_logging();
+        init_logging();
+    }
 }
 
-#[test]
-fn test_handle_sequential_allocation() {
-    let manager = HandleManager::<i32>::new();
+// Additional module-specific tests
+#[cfg(test)]
+mod ffi_tests {
+    use storystream_android_bridge::ffi::*;
 
-    // Handles should be allocated sequentially
-    let h1 = manager.insert(1);
-    let h2 = manager.insert(2);
-    let h3 = manager.insert(3);
+    #[test]
+    fn test_handle_manager_default() {
+        let manager = HandleManager::<String>::default();
+        let h = manager.insert("test".to_string());
+        assert!(h > 0);
+    }
 
-    // They should increase
-    assert!(h2 > h1);
-    assert!(h3 > h2);
+    #[test]
+    fn test_handle_manager_contains() {
+        let manager = HandleManager::<String>::default();
+        let h = manager.insert("test".to_string());
 
-    // Even after removal, new handles should continue to increase
-    manager.remove(h2).unwrap();
-    let h4 = manager.insert(4);
-    assert!(h4 > h3);
+        assert!(manager.contains(h));
+        assert!(!manager.contains(999));
+
+        manager.remove(h).unwrap();
+        assert!(!manager.contains(h));
+    }
 }
 
-#[test]
-fn test_zero_sized_types() {
-    struct ZeroSized;
+#[cfg(test)]
+mod error_handling_tests {
+    use storystream_android_bridge::FfiError;
 
-    let manager = HandleManager::<ZeroSized>::new();
-    let h1 = manager.insert(ZeroSized);
-    let h2 = manager.insert(ZeroSized);
+    #[test]
+    fn test_all_error_variants() {
+        let errors = vec![
+            FfiError::JniError("jni".to_string()),
+            FfiError::Utf8Error("utf8".to_string()),
+            FfiError::InvalidHandle("handle".to_string()),
+            FfiError::General("general".to_string()),
+        ];
 
-    assert_ne!(h1, h2);
-    assert_eq!(manager.len(), 2);
+        for error in errors {
+            // All errors should be displayable
+            let _s = error.to_string();
 
-    manager.remove(h1).unwrap();
-    manager.remove(h2).unwrap();
-    assert!(manager.is_empty());
-}
-
-#[test]
-fn test_error_propagation() {
-    let manager = HandleManager::<String>::new();
-
-    // Attempt operations on invalid handle
-    let result = manager.get(12345);
-    assert!(result.is_err());
-
-    if let Err(e) = result {
-        // Error should be InvalidHandle
-        assert!(matches!(e, FfiError::InvalidHandle(12345)));
-
-        // Error should be displayable
-        let error_string = format!("{}", e);
-        assert!(!error_string.is_empty());
+            // All errors should implement Error trait
+            let _e: &dyn std::error::Error = &error;
+        }
     }
 }

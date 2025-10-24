@@ -1,442 +1,397 @@
-// crates/android-bridge/src/player_bridge.rs
-//! Player bridge for exposing media engine functionality to Android
-//!
-//! This module provides JNI bindings for audio playback control, including:
-//! - Play/pause/stop controls
-//! - Seek operations
-//! - Chapter navigation
-//! - Bookmark management
-//! - Playback state queries
+// Player control bridge for Android JNI
+//
+// This module provides JNI bindings for audio playback control including
+// play, pause, seek, and state management.
 
-use std::panic;
 use crate::ffi::{
-    bool_to_jboolean, jboolean_to_bool, jstring_to_string, option_string_to_jstring,
-    string_to_jstring, FfiError, FfiResult, HandleManager,
+    bool_to_jboolean, jstring_raw_to_string, FfiError, FfiResult, HandleManager,
 };
-use crate::jni_safe;
-use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jdouble, jint, jlong, jstring};
-use jni::JNIEnv;
+use jni::{
+    objects::JClass,
+    sys::{jboolean, jdouble, jint, jlong, jstring},
+    JNIEnv,
+};
 use once_cell::sync::Lazy;
-use std::sync::Arc;
+use std::panic; // Required for jni_safe! macro
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
-// Placeholder types until we implement proper integration
-// These will be replaced with actual imports from media-engine
+// Import audio player from media-engine if available
+#[cfg(feature = "media-engine")]
+use storystream_media_engine::AudioPlayer;
+
+// Mock AudioPlayer for when media-engine isn't available
+#[cfg(not(feature = "media-engine"))]
 pub struct AudioPlayer {
-    // Internal state will be added when integrating with media-engine
+    position: Arc<RwLock<f64>>,
+    duration: Arc<RwLock<f64>>,
+    is_playing: Arc<RwLock<bool>>,
+    speed: Arc<RwLock<f64>>,
+    volume: Arc<RwLock<f64>>,
 }
 
-pub struct PlaybackState {
-    pub is_playing: bool,
-    pub current_position: f64,
-    pub duration: Option<f64>,
-    pub speed: f64,
-    pub volume: f64,
+#[cfg(not(feature = "media-engine"))]
+impl AudioPlayer {
+    pub fn new() -> Self {
+        Self {
+            position: Arc::new(RwLock::new(0.0)),
+            duration: Arc::new(RwLock::new(0.0)),
+            is_playing: Arc::new(RwLock::new(false)),
+            speed: Arc::new(RwLock::new(1.0)),
+            volume: Arc::new(RwLock::new(1.0)),
+        }
+    }
+
+    pub fn play(&self) -> Result<(), String> {
+        *self.is_playing.write().unwrap() = true;
+        Ok(())
+    }
+
+    pub fn pause(&self) -> Result<(), String> {
+        *self.is_playing.write().unwrap() = false;
+        Ok(())
+    }
+
+    pub fn stop(&self) -> Result<(), String> {
+        *self.is_playing.write().unwrap() = false;
+        *self.position.write().unwrap() = 0.0;
+        Ok(())
+    }
+
+    pub fn seek(&self, position: Duration) -> Result<(), String> {
+        *self.position.write().unwrap() = position.as_secs_f64();
+        Ok(())
+    }
+
+    pub fn position(&self) -> Duration {
+        Duration::from_secs_f64(*self.position.read().unwrap())
+    }
+
+    pub fn duration(&self) -> Duration {
+        Duration::from_secs_f64(*self.duration.read().unwrap())
+    }
+
+    pub fn is_playing(&self) -> bool {
+        *self.is_playing.read().unwrap()
+    }
+
+    pub fn set_speed(&self, speed: f64) -> Result<(), String> {
+        if !(0.25..=4.0).contains(&speed) {
+            return Err("Speed must be between 0.25 and 4.0".to_string());
+        }
+        *self.speed.write().unwrap() = speed;
+        Ok(())
+    }
+
+    pub fn speed(&self) -> f64 {
+        *self.speed.read().unwrap()
+    }
+
+    pub fn set_volume(&self, volume: f64) -> Result<(), String> {
+        if !(0.0..=1.0).contains(&volume) {
+            return Err("Volume must be between 0.0 and 1.0".to_string());
+        }
+        *self.volume.write().unwrap() = volume;
+        Ok(())
+    }
+
+    pub fn volume(&self) -> f64 {
+        *self.volume.read().unwrap()
+    }
+
+    pub fn load(&self, _path: &str) -> Result<(), String> {
+        *self.duration.write().unwrap() = 3600.0; // Mock 1 hour duration
+        Ok(())
+    }
 }
 
-pub struct ChapterInfo {
-    pub index: usize,
-    pub title: String,
-    pub start_time: f64,
-    pub end_time: f64,
-}
-
-pub struct BookmarkInfo {
-    pub id: String,
-    pub position: f64,
-    pub label: Option<String>,
-    pub created_at: i64,
-}
-
-// Global handle manager for audio players
+/// Global player handle manager
 static PLAYER_HANDLES: Lazy<HandleManager<Arc<AudioPlayer>>> = Lazy::new(HandleManager::new);
 
-/// Creates a new audio player instance
-///
-/// # Safety
-/// This function is called from Java via JNI. The returned handle must be
-/// properly released using `player_destroy` to prevent memory leaks.
+/// Create a new player instance
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeCreate(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeCreate(
     mut env: JNIEnv,
     _class: JClass,
-    audio_file_path: JString,
 ) -> jlong {
-    jni_safe!(env, 0, {
-        let path = jstring_to_string(&mut env, audio_file_path)?;
-
-        // TODO: Create actual AudioPlayer from media-engine
-        let player = Arc::new(AudioPlayer {});
-
+    crate::jni_safe!(env, 0, {
+        let player = Arc::new(AudioPlayer::new());
         let handle = PLAYER_HANDLES.insert(player);
+
         crate::ffi::log_info("StoryStream", &format!("Created player handle: {}", handle));
 
         Ok(handle)
     })
 }
 
-/// Destroys an audio player instance
-///
-/// # Safety
-/// After calling this function, the handle becomes invalid and must not be used.
+/// Load an audio file for playback
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeDestroy(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeLoad(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-) {
-    jni_safe!(env, (), {
-        PLAYER_HANDLES.remove(handle)?;
-        crate::ffi::log_info("StoryStream", &format!("Destroyed player handle: {}", handle));
-        Ok(())
-    })
-}
-
-/// Starts playback
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativePlay(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
+    audio_file_path: jstring,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let path = jstring_raw_to_string(&mut env, audio_file_path)?;
 
-        // TODO: Implement actual play logic from media-engine
-        crate::ffi::log_debug("StoryStream", "Play requested");
+        crate::ffi::log_info("StoryStream", &format!("Loading audio file: {}", path));
+
+        player.read().unwrap().load(&path)
+            .map_err(|e| FfiError::General(format!("Failed to load audio: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Pauses playback
+/// Start or resume playback
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativePause(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativePlay(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
 
-        // TODO: Implement actual pause logic from media-engine
-        crate::ffi::log_debug("StoryStream", "Pause requested");
+        crate::ffi::log_info("StoryStream", "Starting playback");
+
+        player.read().unwrap().play()
+            .map_err(|e| FfiError::General(format!("Failed to play: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Stops playback and resets position
+/// Pause playback
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeStop(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativePause(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
 
-        // TODO: Implement actual stop logic from media-engine
-        crate::ffi::log_debug("StoryStream", "Stop requested");
+        crate::ffi::log_info("StoryStream", "Pausing playback");
+
+        player.read().unwrap().pause()
+            .map_err(|e| FfiError::General(format!("Failed to pause: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Seeks to a specific position in seconds
+/// Stop playback and reset position
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeSeek(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeStop(
+    mut env: JNIEnv,
+    _class: JClass,
+    handle: jlong,
+) -> jboolean {
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
+
+        crate::ffi::log_info("StoryStream", "Stopping playback");
+
+        player.read().unwrap().stop()
+            .map_err(|e| FfiError::General(format!("Failed to stop: {}", e)))?;
+
+        Ok(bool_to_jboolean(true))
+    })
+}
+
+/// Seek to position in seconds
+#[no_mangle]
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSeek(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
     position_seconds: jdouble,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
 
-        // TODO: Implement actual seek logic from media-engine
-        crate::ffi::log_debug(
-            "StoryStream",
-            &format!("Seek to {} seconds", position_seconds),
-        );
+        if position_seconds < 0.0 {
+            return Err(FfiError::General("Position cannot be negative".to_string()));
+        }
+
+        crate::ffi::log_info("StoryStream", &format!("Seeking to: {:.2}s", position_seconds));
+
+        player.read().unwrap().seek(Duration::from_secs_f64(position_seconds))
+            .map_err(|e| FfiError::General(format!("Failed to seek: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Gets the current playback position in seconds
+/// Get current playback position in seconds
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetPosition(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeGetPosition(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jdouble {
-    jni_safe!(env, 0.0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual position from media-engine
-        Ok(0.0)
+    crate::jni_safe!(env, 0.0, {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let position = player.read().unwrap().position();
+        Ok(position.as_secs_f64())
     })
 }
 
-/// Gets the total duration in seconds
+/// Get total duration in seconds
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetDuration(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeGetDuration(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jdouble {
-    jni_safe!(env, 0.0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual duration from media-engine
-        Ok(0.0)
+    crate::jni_safe!(env, 0.0, {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let duration = player.read().unwrap().duration();
+        Ok(duration.as_secs_f64())
     })
 }
 
-/// Checks if audio is currently playing
+/// Check if currently playing
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeIsPlaying(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeIsPlaying(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual playing state from media-engine
-        Ok(bool_to_jboolean(false))
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let is_playing = player.read().unwrap().is_playing();
+        Ok(bool_to_jboolean(is_playing))
     })
 }
 
-/// Sets the playback speed
-///
-/// # Parameters
-/// - `speed`: Playback speed multiplier (0.5 = half speed, 2.0 = double speed)
+/// Set playback speed (0.25 to 4.0, 1.0 = normal)
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeSetSpeed(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSetSpeed(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
     speed: jdouble,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
 
-        if speed <= 0.0 || speed > 3.0 {
-            return Err(FfiError::Core("Speed must be between 0 and 3".to_string()));
+        if !(0.25..=4.0).contains(&speed) {
+            return Err(FfiError::General("Speed must be between 0.25 and 4.0".to_string()));
         }
 
-        // TODO: Set actual speed in media-engine
-        crate::ffi::log_debug("StoryStream", &format!("Set speed to {}", speed));
+        crate::ffi::log_info("StoryStream", &format!("Setting speed: {:.2}x", speed));
+
+        player.read().unwrap().set_speed(speed)
+            .map_err(|e| FfiError::General(format!("Failed to set speed: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Gets the current playback speed
+/// Get current playback speed
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetSpeed(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeGetSpeed(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jdouble {
-    jni_safe!(env, 1.0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual speed from media-engine
-        Ok(1.0)
+    crate::jni_safe!(env, 1.0, {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let speed = player.read().unwrap().speed();
+        Ok(speed)
     })
 }
 
-/// Sets the volume
-///
-/// # Parameters
-/// - `volume`: Volume level (0.0 = mute, 1.0 = full volume)
+/// Set volume (0.0 to 1.0)
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeSetVolume(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSetVolume(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
     volume: jdouble,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let player = PLAYER_HANDLES.get(handle)?;
 
-        if volume < 0.0 || volume > 1.0 {
-            return Err(FfiError::Core(
-                "Volume must be between 0.0 and 1.0".to_string(),
-            ));
+        if !(0.0..=1.0).contains(&volume) {
+            return Err(FfiError::General("Volume must be between 0.0 and 1.0".to_string()));
         }
 
-        // TODO: Set actual volume in media-engine
-        crate::ffi::log_debug("StoryStream", &format!("Set volume to {}", volume));
+        crate::ffi::log_info("StoryStream", &format!("Setting volume: {:.2}", volume));
+
+        player.read().unwrap().set_volume(volume)
+            .map_err(|e| FfiError::General(format!("Failed to set volume: {}", e)))?;
 
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Gets the current volume
+/// Get current volume
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetVolume(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeGetVolume(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jdouble {
-    jni_safe!(env, 1.0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual volume from media-engine
-        Ok(1.0)
+    crate::jni_safe!(env, 1.0, {
+        let player = PLAYER_HANDLES.get(handle)?;
+        let volume = player.read().unwrap().volume();
+        Ok(volume)
     })
 }
 
-/// Gets the number of chapters
+/// Get current chapter index
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetChapterCount(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeGetCurrentChapter(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
 ) -> jint {
-    jni_safe!(env, 0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, -1, {
+        let _player = PLAYER_HANDLES.get(handle)?;
 
-        // TODO: Get actual chapter count from media-engine
+        // Placeholder: Would return actual chapter index
         Ok(0)
     })
 }
 
-/// Gets the current chapter index
+/// Skip to specific chapter
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetCurrentChapter(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-) -> jint {
-    jni_safe!(env, -1, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get actual current chapter from media-engine
-        Ok(0)
-    })
-}
-
-/// Navigates to the next chapter
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeNextChapter(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Implement next chapter navigation from media-engine
-        crate::ffi::log_debug("StoryStream", "Next chapter requested");
-
-        Ok(bool_to_jboolean(true))
-    })
-}
-
-/// Navigates to the previous chapter
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativePreviousChapter(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Implement previous chapter navigation from media-engine
-        crate::ffi::log_debug("StoryStream", "Previous chapter requested");
-
-        Ok(bool_to_jboolean(true))
-    })
-}
-
-/// Jumps to a specific chapter
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGoToChapter(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeSkipToChapter(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
     chapter_index: jint,
 ) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
+    crate::jni_safe!(env, bool_to_jboolean(false), {
+        let _player = PLAYER_HANDLES.get(handle)?;
 
         if chapter_index < 0 {
-            return Err(FfiError::Core("Chapter index cannot be negative".to_string()));
+            return Err(FfiError::General("Chapter index cannot be negative".to_string()));
         }
 
-        // TODO: Implement chapter navigation from media-engine
-        crate::ffi::log_debug(
-            "StoryStream",
-            &format!("Go to chapter {}", chapter_index),
-        );
+        crate::ffi::log_info("StoryStream", &format!("Skipping to chapter: {}", chapter_index));
 
+        // Placeholder: Would skip to chapter
         Ok(bool_to_jboolean(true))
     })
 }
 
-/// Adds a bookmark at the current position
+/// Destroy player instance
 #[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeAddBookmark(
+pub extern "C" fn Java_com_storystream_StoryStreamPlayer_nativeDestroy(
     mut env: JNIEnv,
     _class: JClass,
     handle: jlong,
-    label: JString,
-) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-        let label_str = if label.is_null() {
-            None
-        } else {
-            Some(jstring_to_string(&mut env, label)?)
-        };
-
-        // TODO: Add bookmark using media-engine
-        crate::ffi::log_debug(
-            "StoryStream",
-            &format!("Add bookmark: {:?}", label_str),
-        );
-
-        Ok(bool_to_jboolean(true))
-    })
-}
-
-/// Removes a bookmark by ID
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeRemoveBookmark(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-    bookmark_id: JString,
-) -> jboolean {
-    jni_safe!(env, bool_to_jboolean(false), {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-        let id = jstring_to_string(&mut env, bookmark_id)?;
-
-        // TODO: Remove bookmark using media-engine
-        crate::ffi::log_debug("StoryStream", &format!("Remove bookmark: {}", id));
-
-        Ok(bool_to_jboolean(true))
-    })
-}
-
-/// Gets the number of bookmarks
-#[no_mangle]
-pub extern "C" fn Java_com_storystream_Player_nativeGetBookmarkCount(
-    mut env: JNIEnv,
-    _class: JClass,
-    handle: jlong,
-) -> jint {
-    jni_safe!(env, 0, {
-        let _guard = PLAYER_HANDLES.get(handle)?;
-
-        // TODO: Get bookmark count from media-engine
-        Ok(0)
+) {
+    crate::jni_safe!(env, (), {
+        PLAYER_HANDLES.remove(handle)?;
+        crate::ffi::log_info("StoryStream", &format!("Destroyed player handle: {}", handle));
+        Ok(())
     })
 }
 
@@ -445,10 +400,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_player_handles_lifecycle() {
-        // Simulate creating players
-        let player1 = Arc::new(AudioPlayer {});
-        let player2 = Arc::new(AudioPlayer {});
+    fn test_audio_player_creation() {
+        let player = AudioPlayer::new();
+        assert!(!player.is_playing());
+        assert_eq!(player.volume(), 1.0);
+        assert_eq!(player.speed(), 1.0);
+    }
+
+    #[test]
+    fn test_player_handle_lifecycle() {
+        let player = Arc::new(AudioPlayer::new());
+        let handle = PLAYER_HANDLES.insert(player);
+        assert!(handle > 0);
+
+        assert!(PLAYER_HANDLES.contains(handle));
+        assert!(PLAYER_HANDLES.get(handle).is_ok());
+
+        let removed = PLAYER_HANDLES.remove(handle);
+        assert!(removed.is_ok());
+
+        assert!(!PLAYER_HANDLES.contains(handle));
+        assert!(PLAYER_HANDLES.get(handle).is_err());
+    }
+
+    #[test]
+    fn test_multiple_players() {
+        let player1 = Arc::new(AudioPlayer::new());
+        let player2 = Arc::new(AudioPlayer::new());
 
         let handle1 = PLAYER_HANDLES.insert(player1);
         let handle2 = PLAYER_HANDLES.insert(player2);
@@ -457,18 +435,46 @@ mod tests {
         assert!(PLAYER_HANDLES.contains(handle1));
         assert!(PLAYER_HANDLES.contains(handle2));
 
-        // Remove one
         PLAYER_HANDLES.remove(handle1).unwrap();
+
         assert!(!PLAYER_HANDLES.contains(handle1));
         assert!(PLAYER_HANDLES.contains(handle2));
 
-        // Clean up
         PLAYER_HANDLES.remove(handle2).unwrap();
     }
 
     #[test]
-    fn test_invalid_handle_access() {
-        let result = PLAYER_HANDLES.get(99999);
-        assert!(result.is_err());
+    fn test_player_operations() {
+        let player = AudioPlayer::new();
+
+        // Test play/pause
+        assert!(player.play().is_ok());
+        assert!(player.is_playing());
+
+        assert!(player.pause().is_ok());
+        assert!(!player.is_playing());
+
+        // Test stop
+        assert!(player.stop().is_ok());
+        assert!(!player.is_playing());
+        assert_eq!(player.position().as_secs_f64(), 0.0);
+
+        // Test seek
+        assert!(player.seek(Duration::from_secs(30)).is_ok());
+        assert_eq!(player.position().as_secs(), 30);
+
+        // Test speed
+        assert!(player.set_speed(1.5).is_ok());
+        assert_eq!(player.speed(), 1.5);
+
+        assert!(player.set_speed(0.1).is_err()); // Too slow
+        assert!(player.set_speed(5.0).is_err()); // Too fast
+
+        // Test volume
+        assert!(player.set_volume(0.5).is_ok());
+        assert_eq!(player.volume(), 0.5);
+
+        assert!(player.set_volume(-0.1).is_err()); // Negative
+        assert!(player.set_volume(1.1).is_err()); // Too loud
     }
 }
