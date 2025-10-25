@@ -8,8 +8,14 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct LibraryConfig {
+    /// Database file path
+    pub database_path: String,
+
     /// Default library paths to scan for audiobooks
     pub library_paths: Vec<PathBuf>,
+
+    /// Paths to watch for changes (auto-import)
+    pub paths: Vec<String>,
 
     /// Supported audio file extensions
     pub supported_extensions: Vec<String>,
@@ -42,7 +48,9 @@ pub struct LibraryConfig {
 impl Default for LibraryConfig {
     fn default() -> Self {
         Self {
+            database_path: "storystream.db".to_string(),
             library_paths: Vec::new(),
+            paths: Vec::new(),
             supported_extensions: vec![
                 "mp3".to_string(),
                 "m4a".to_string(),
@@ -66,12 +74,17 @@ impl Default for LibraryConfig {
 
 impl ConfigSection for LibraryConfig {
     fn validate(&self) -> Result<(), Vec<ValidationError>> {
-        let mut results = vec![Validator::in_range(
-            self.min_file_size_bytes,
-            0,
-            100 * 1024 * 1024, // 100 MB max
-            "library.min_file_size_bytes",
-        )];
+        let mut results = vec![
+            // Validate database path is not empty
+            Validator::not_empty(&self.database_path, "library.database_path"),
+            // Validate min file size
+            Validator::in_range(
+                self.min_file_size_bytes,
+                0,
+                100 * 1024 * 1024, // 100 MB max
+                "library.min_file_size_bytes",
+            ),
+        ];
 
         // Validate that extensions are not empty
         for (i, ext) in self.supported_extensions.iter().enumerate() {
@@ -104,7 +117,9 @@ impl ConfigSection for LibraryConfig {
     }
 
     fn merge(&mut self, other: Self) {
+        self.database_path = other.database_path;
         self.library_paths = other.library_paths;
+        self.paths = other.paths;
         self.supported_extensions = other.supported_extensions;
         self.auto_import = other.auto_import;
         self.extract_metadata = other.extract_metadata;
@@ -129,6 +144,19 @@ mod tests {
     fn test_default_is_valid() {
         let config = LibraryConfig::default();
         assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_database_path_default() {
+        let config = LibraryConfig::default();
+        assert_eq!(config.database_path, "storystream.db");
+    }
+
+    #[test]
+    fn test_empty_database_path() {
+        let mut config = LibraryConfig::default();
+        config.database_path = String::new();
+        assert!(config.validate().is_err());
     }
 
     #[test]
@@ -175,11 +203,13 @@ mod tests {
     fn test_merge() {
         let mut base = LibraryConfig::default();
         let mut other = LibraryConfig::default();
+        other.database_path = "custom.db".to_string();
         other.auto_import = true;
         other.extract_metadata = false;
         other.library_paths = vec![PathBuf::from("/books")];
 
         base.merge(other);
+        assert_eq!(base.database_path, "custom.db");
         assert!(base.auto_import);
         assert!(!base.extract_metadata);
         assert_eq!(base.library_paths, vec![PathBuf::from("/books")]);

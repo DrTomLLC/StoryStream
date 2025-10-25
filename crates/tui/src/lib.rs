@@ -7,10 +7,14 @@ mod events;
 mod plugins;
 mod state;
 mod theme;
-pub mod ui; // CHANGED: Made public
+pub mod ui;
+
+// Integration module for real functionality (requires tokio)
+pub mod integration;
 
 pub use app::App;
 pub use error::{TuiError, TuiResult};
+pub use integration::IntegratedTuiApp;
 pub use plugins::{Plugin, PluginManager};
 pub use state::{AppState, PlaybackState, View};
 pub use theme::{Theme, ThemeType};
@@ -23,7 +27,7 @@ use crossterm::{
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
-/// Main TUI application wrapper
+/// Main TUI application wrapper (demo mode - no real functionality)
 pub struct TuiApp {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
     app: App,

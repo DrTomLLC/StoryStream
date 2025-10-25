@@ -38,7 +38,7 @@ pub mod schema;
 pub mod watcher;
 
 // Config sections
-mod app_config;
+pub mod app_config;
 mod library_config;
 mod player_config;
 

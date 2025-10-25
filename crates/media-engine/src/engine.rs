@@ -6,7 +6,7 @@ use crate::playback_thread::{
     self, AudioDecoder as PlaybackAudioDecoder, Equalizer as PlaybackEqualizer, PlaybackCommand,
 };
 use crate::speed::Speed;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
@@ -41,11 +41,11 @@ pub struct MediaEngine {
     current_status: Arc<Mutex<bool>>,
     chapters: Arc<Mutex<ChapterList>>,
     volume: Arc<Mutex<f32>>,
-    speed: Arc<Mutex<Speed>>,
+    pub speed: Arc<Mutex<Speed>>,
     equalizer: Arc<Mutex<Equalizer>>,
     thread_handle: Option<JoinHandle<()>>,
     playback_state: Arc<Mutex<PlaybackState>>,
-    duration: Option<Duration>,
+    pub duration: Option<Duration>,
 }
 
 impl MediaEngine {
@@ -76,7 +76,7 @@ impl MediaEngine {
     }
 
     /// Loads an audio file for playback
-    pub fn load(&mut self, path: &str) -> Result<(), String> {
+    pub fn load(&mut self, path: &PathBuf) -> Result<(), String> {
         // Stop any existing playback
         self.stop()?;
 

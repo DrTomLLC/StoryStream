@@ -29,6 +29,14 @@ pub enum TuiError {
     #[error("Media engine error: {0}")]
     MediaEngine(String),
 
+    /// Initialization error (for integrated mode)
+    #[error("Initialization error: {0}")]
+    Initialization(String),
+
+    /// Playback error (for integrated mode)
+    #[error("Playback error: {0}")]
+    PlaybackError(String),
+
     /// Custom error
     #[error("{0}")]
     Custom(String),
@@ -49,5 +57,34 @@ mod tests {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let tui_err: TuiError = io_err.into();
         assert!(matches!(tui_err, TuiError::Io(_)));
+    }
+
+    #[test]
+    fn test_initialization_error() {
+        let err = TuiError::Initialization("Failed to setup".to_string());
+        assert!(err.to_string().contains("Initialization error"));
+    }
+
+    #[test]
+    fn test_playback_error() {
+        let err = TuiError::PlaybackError("Audio failed".to_string());
+        assert!(err.to_string().contains("Playback error"));
+    }
+
+    #[test]
+    fn test_all_error_variants() {
+        let errors = vec![
+            TuiError::Terminal("test".into()),
+            TuiError::Application("test".into()),
+            TuiError::Database("test".into()),
+            TuiError::MediaEngine("test".into()),
+            TuiError::Initialization("test".into()),
+            TuiError::PlaybackError("test".into()),
+            TuiError::Custom("test".into()),
+        ];
+
+        for err in errors {
+            assert!(!err.to_string().is_empty());
+        }
     }
 }
