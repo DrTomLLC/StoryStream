@@ -435,7 +435,8 @@ mod engine_tests {
     #[test]
     fn test_load_nonexistent_file() {
         if let Ok(mut engine) = MediaEngine::with_defaults() {
-            let result = engine.load("nonexistent.mp3");
+            let path = PathBuf::from("nonexistent.mp3");
+            let result = engine.load(&path);
             assert!(result.is_err());
         }
     }
