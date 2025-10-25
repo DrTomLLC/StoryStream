@@ -51,6 +51,10 @@ pub struct IntegratedTuiApp {
 
 impl IntegratedTuiApp {
     /// Create a new integrated TUI application
+    ///
+    /// # Errors
+    ///
+    /// Returns `TuiError` if initialization fails for any component
     pub async fn new() -> TuiResult<Self> {
         // Load configuration
         let config_manager = ConfigManager::new()
@@ -114,6 +118,10 @@ impl IntegratedTuiApp {
     }
 
     /// Run the integrated TUI application
+    ///
+    /// # Errors
+    ///
+    /// Returns `TuiError` if the event loop encounters an error
     pub async fn run(&mut self) -> TuiResult<()> {
         let result = self.event_loop().await;
         self.cleanup()?;
@@ -309,12 +317,17 @@ impl IntegratedTuiApp {
     }
 
     /// Load and play a book
+    ///
+    /// # Errors
+    ///
+    /// Returns `TuiError::PlaybackError` if loading or playing fails
     async fn load_book(&mut self, book: &Book) -> TuiResult<()> {
         let mut engine = self
             .media_engine
             .lock()
             .map_err(|e| TuiError::PlaybackError(format!("Lock error: {}", e)))?;
 
+        // Load the audio file (book.file_path is PathBuf, load expects &PathBuf)
         engine
             .load(&book.file_path)
             .map_err(|e| TuiError::PlaybackError(format!("Load error: {}", e)))?;
@@ -477,6 +490,19 @@ impl IntegratedTuiApp {
 
 impl Drop for IntegratedTuiApp {
     fn drop(&mut self) {
+        // Cleanup is safe to fail in drop
         let _ = self.cleanup();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_color_scheme_conversion() {
+        assert_eq!(color_scheme_to_theme(ColorScheme::Light), ThemeType::Light);
+        assert_eq!(color_scheme_to_theme(ColorScheme::Dark), ThemeType::Dark);
+        assert_eq!(color_scheme_to_theme(ColorScheme::Auto), ThemeType::Dark);
     }
 }

@@ -96,8 +96,7 @@ impl MediaEngine {
         self.duration = Some(duration);
 
         self.decoder = Some(decoder);
-        self.loaded_file = Some(path.to_string());
-
+        self.loaded_file = Some(path.to_string_lossy().to_string());
         // Update playback state with duration
         if let Ok(mut state) = self.playback_state.lock() {
             state.set_duration(duration);
