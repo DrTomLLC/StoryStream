@@ -9,11 +9,15 @@ pub struct Timestamp(i64);
 
 impl Timestamp {
     /// Creates a timestamp for the current moment
+    ///
+    /// # Safety
+    /// If system time is somehow before UNIX_EPOCH (should never happen),
+    /// gracefully falls back to timestamp 0 instead of panicking.
     pub fn now() -> Self {
         Self(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or_else(|_| std::time::Duration::from_secs(0))
                 .as_millis() as i64,
         )
     }
@@ -45,6 +49,9 @@ impl fmt::Display for Timestamp {
 pub struct Duration(u64);
 
 impl Duration {
+    /// Zero duration constant
+    pub const ZERO: Self = Self(0);
+
     /// Creates a duration from milliseconds
     pub fn from_millis(millis: u64) -> Self {
         Self(millis)
@@ -70,18 +77,15 @@ impl Duration {
         self.0 == 0
     }
 
-    /// Formats as HH:MM:SS
+    /// Formats as H:MM:SS (always shows hours)
+    /// FIXED: Now always returns H:MM:SS format instead of conditionally returning MM:SS
     pub fn as_hms(&self) -> String {
         let total_seconds = self.as_seconds();
         let hours = total_seconds / 3600;
         let minutes = (total_seconds % 3600) / 60;
         let seconds = total_seconds % 60;
 
-        if hours > 0 {
-            format!("{}:{:02}:{:02}", hours, minutes, seconds)
-        } else {
-            format!("{}:{:02}", minutes, seconds)
-        }
+        format!("{}:{:02}:{:02}", hours, minutes, seconds)
     }
 }
 
@@ -172,13 +176,15 @@ mod tests {
     #[test]
     fn test_duration_as_hms_without_hours() {
         let d = Duration::from_seconds(125); // 2m 5s
-        assert_eq!(d.as_hms(), "2:05");
+        // FIXED: Now always shows hours, so "0:02:05" instead of "2:05"
+        assert_eq!(d.as_hms(), "0:02:05");
     }
 
     #[test]
     fn test_duration_as_hms_zero() {
         let d = Duration::from_seconds(0);
-        assert_eq!(d.as_hms(), "0:00");
+        // FIXED: Now always shows hours, so "0:00:00" instead of "0:00"
+        assert_eq!(d.as_hms(), "0:00:00");
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use media_engine::{EngineConfig, MediaEngine, PlaybackState, Speed};
+use std::path::PathBuf;
 use std::time::Duration;
 
 #[test]
@@ -212,8 +213,9 @@ fn test_engine_drop_stops_playback() {
 #[test]
 fn test_load_clears_previous_state() {
     if let Ok(mut engine) = MediaEngine::with_defaults() {
-        // Try to load a file (will fail but that's okay for this test)
-        let _ = engine.load("nonexistent.mp3");
+        // FIXED: Use PathBuf instead of &str
+        let path = PathBuf::from("nonexistent.mp3");
+        let _ = engine.load(&path);
 
         // Position should be reset
         assert_eq!(engine.position(), Duration::from_secs(0));

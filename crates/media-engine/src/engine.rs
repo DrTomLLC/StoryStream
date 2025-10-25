@@ -76,7 +76,7 @@ impl MediaEngine {
     }
 
     /// Loads an audio file for playback
-    pub fn load(&mut self, path: &PathBuf) -> Result<(), String> {
+    pub fn load(&mut self, path: &str) -> Result<(), String> {
         // Stop any existing playback
         self.stop()?;
 
