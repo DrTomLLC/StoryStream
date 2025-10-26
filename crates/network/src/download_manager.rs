@@ -98,7 +98,8 @@ impl Default for DownloadManagerConfig {
     }
 }
 
-struct DownloadManagerState {
+// Made public to fix visibility warning
+pub struct DownloadManagerState {
     queue: VecDeque<DownloadTask>,
     active: HashMap<String, JoinHandle<NetworkResult<u64>>>,
     status: HashMap<String, DownloadStatus>,
@@ -135,6 +136,11 @@ impl AdvancedDownloadManager {
         }
     }
 
+    /// Get the current configuration
+    pub fn config(&self) -> &DownloadManagerConfig {
+        &self.config
+    }
+
     pub async fn enqueue(&self, task: DownloadTask) -> NetworkResult<()> {
         let mut state = self.state.write().await;
 
@@ -169,47 +175,38 @@ impl AdvancedDownloadManager {
                     log::info!("Download manager shutting down");
                     break;
                 }
-                _ = tokio::time::sleep(tokio::time::Duration::from_millis(100)) => {
-                    let task_opt = {
-                        let mut state_guard = state.write().await;
-                        state_guard.queue.pop_front()
+                _ = async {
+                    let task = {
+                        let mut state = state.write().await;
+                        state.queue.pop_front()
                     };
 
-                    if let Some(task) = task_opt {
-                        let permit = match semaphore.clone().try_acquire_owned() {
-                            Ok(p) => p,
-                            Err(_) => {
-                                let mut state_guard = state.write().await;
-                                state_guard.queue.push_front(task);
-                                continue;
-                            }
-                        };
+                    if let Some(task) = task {
+                        let permit = semaphore.clone().acquire_owned().await.ok();
 
-                        let task_id = task.id.clone();
-                        let client_clone = client.clone();
+                        if let Some(_permit) = permit {
+                            let task_id = task.id.clone();
+                            let client = client.clone();
+                            let state = Arc::clone(&state);
 
-                        {
-                            let mut state_guard = state.write().await;
-                            state_guard.status.insert(task_id.clone(), DownloadStatus::InProgress);
+                            let handle = tokio::spawn(async move {
+                                let result = Self::download_task(&client, &task).await;
+                                drop(_permit);
+                                result
+                            });
+
+                            state.write().await.active.insert(task_id.clone(), handle);
+                            state.write().await.status.insert(task_id, DownloadStatus::InProgress);
                         }
-
-                        let handle = tokio::spawn(async move {
-                            let result = Self::execute_download(client_clone, task).await;
-                            drop(permit);
-                            result
-                        });
-
-                        {
-                            let mut state_guard = state.write().await;
-                            state_guard.active.insert(task_id, handle);
-                        }
+                    } else {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
                     }
-                }
+                } => {}
             }
         }
     }
 
-    async fn execute_download(client: Client, task: DownloadTask) -> NetworkResult<u64> {
+    async fn download_task(client: &Client, task: &DownloadTask) -> NetworkResult<u64> {
         let response = client.get(&task.url).await?;
         let total_size = response.content_length();
 
@@ -272,5 +269,91 @@ impl AdvancedDownloadManager {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_download_manager_creation() {
+        let client = Client::new().unwrap();
+        let config = DownloadManagerConfig::default();
+        let _manager = AdvancedDownloadManager::new(client, config);
+    }
+
+    #[tokio::test]
+    async fn test_enqueue_task() {
+        let client = Client::new().unwrap();
+        let config = DownloadManagerConfig::default();
+        let manager = AdvancedDownloadManager::new(client, config);
+
+        let task = DownloadTask::new(
+            "test".to_string(),
+            "https://example.com/file".to_string(),
+            PathBuf::from("/tmp/test"),
+        );
+
+        assert!(manager.enqueue(task).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_duplicate_enqueue() {
+        let client = Client::new().unwrap();
+        let config = DownloadManagerConfig::default();
+        let manager = AdvancedDownloadManager::new(client, config);
+
+        let task1 = DownloadTask::new(
+            "test".to_string(),
+            "https://example.com/file".to_string(),
+            PathBuf::from("/tmp/test"),
+        );
+
+        let task2 = task1.clone();
+
+        assert!(manager.enqueue(task1).await.is_ok());
+        assert!(manager.enqueue(task2).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_priority_ordering() {
+        let client = Client::new().unwrap();
+        let config = DownloadManagerConfig::default();
+        let manager = AdvancedDownloadManager::new(client, config);
+
+        let low = DownloadTask::new(
+            "low".to_string(),
+            "https://example.com/low".to_string(),
+            PathBuf::from("/tmp/low"),
+        )
+            .with_priority(Priority::Low);
+
+        let high = DownloadTask::new(
+            "high".to_string(),
+            "https://example.com/high".to_string(),
+            PathBuf::from("/tmp/high"),
+        )
+            .with_priority(Priority::High);
+
+        manager.enqueue(low).await.unwrap();
+        manager.enqueue(high).await.unwrap();
+
+        let state = manager.state.read().await;
+        assert_eq!(state.queue.len(), 2);
+        assert_eq!(state.queue[0].id, "high");
+        assert_eq!(state.queue[1].id, "low");
+    }
+
+    #[tokio::test]
+    async fn test_config_accessor() {
+        let client = Client::new().unwrap();
+        let config = DownloadManagerConfig {
+            max_concurrent: 5,
+            ..Default::default()
+        };
+        let manager = AdvancedDownloadManager::new(client, config);
+
+        assert_eq!(manager.config().max_concurrent, 5);
     }
 }
